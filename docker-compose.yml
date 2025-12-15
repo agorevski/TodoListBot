@@ -1,0 +1,55 @@
+# Docker Compose configuration for Discord A/B/C Todo Bot
+# Usage:
+#   1. Copy .env.example to .env and add your Discord token
+#   2. Run: docker-compose up -d
+#   3. View logs: docker-compose logs -f
+
+services:
+  todo-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: discord-todo-bot
+    restart: unless-stopped
+    
+    # Environment variables
+    environment:
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - DATABASE_PATH=/app/data/tasks.db
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - SYNC_COMMANDS_GLOBALLY=${SYNC_COMMANDS_GLOBALLY:-true}
+      - RETENTION_DAYS=${RETENTION_DAYS:-0}
+    
+    # Persist the SQLite database
+    volumes:
+      - todo-bot-data:/app/data
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.25'
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "from todo_bot import TodoBot; print('OK')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+# Named volumes for data persistence
+volumes:
+  todo-bot-data:
+    driver: local

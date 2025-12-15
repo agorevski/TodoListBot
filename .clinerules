@@ -1,0 +1,75 @@
+# Cline Rules for Discord A/B/C Todo Bot
+
+## Project Overview
+
+This is a Discord bot for managing daily tasks using the A/B/C priority system.
+Built with discord.py v2+ using slash commands and interactive buttons.
+Supports Python 3.11 and 3.12. Version 1.0.0.
+
+## Code Style
+
+- Use Python 3.11+ features
+- Follow PEP 8 style guidelines
+- Use Ruff for linting and formatting
+- Use type hints throughout (PEP 561 compliant with `py.typed` marker)
+- Prefer dataclasses for data models and configuration
+- Use async/await for all Discord and database operations
+- Use custom exception hierarchy from `exceptions.py`
+- Use centralized constants from `config.py`
+
+## Architecture
+
+- Storage layer uses abstract interface pattern for easy database swapping
+- Tasks are scoped by (server_id, channel_id, user_id)
+- Views/Buttons handle interactive UI components
+- Cogs organize slash commands
+- `config.py` contains centralized configuration and constants (`BotConfig` dataclass)
+- `exceptions.py` provides typed exception hierarchy (`TodoBotError`, `ValidationError`, `TaskNotFoundError`, `StorageError`, etc.)
+- Rate limiting: 5 commands per 10 seconds per user
+
+## Docker Support
+
+- Multi-stage Dockerfile for minimal production images
+- docker-compose.yml for easy deployment
+- Non-root user for security
+- Health checks configured
+- Volume persistence for SQLite database
+- Resource limits: 256MB memory, 0.5 CPU
+
+## Testing
+
+- Minimum 95% code coverage required
+- Use pytest with pytest-asyncio
+- Mock Discord interactions in tests
+- Test edge cases and error handling
+- CI runs on both Python 3.11 and 3.12
+- Extended test files for comprehensive coverage
+
+## File Structure
+
+- `src/todo_bot/` - Main source code
+  - `config.py` - Centralized configuration and constants
+  - `exceptions.py` - Custom exception hierarchy
+  - `py.typed` - PEP 561 type marker
+- `tests/` - Unit and integration tests
+  - Extended test files: `test_*_extended.py`
+- `.github/workflows/` - CI/CD configuration
+- `Dockerfile` - Multi-stage Docker build
+- `docker-compose.yml` - Docker Compose configuration
+- Configuration files in project root
+
+## Environment Variables
+
+- `DISCORD_TOKEN` - Bot token (required)
+- `DATABASE_PATH` - SQLite database path (default: `data/tasks.db`)
+- `LOG_LEVEL` - Logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL (default: INFO)
+- `SYNC_COMMANDS_GLOBALLY` - Sync slash commands globally (default: true)
+- `RETENTION_DAYS` - Days to keep old tasks, 0 = forever (default: 0)
+
+## Dependencies
+
+- discord.py >= 2.0
+- python-dotenv >= 1.0.0
+- aiosqlite >= 0.19.0
+- pytest, pytest-asyncio, pytest-cov for testing
+- ruff for linting
