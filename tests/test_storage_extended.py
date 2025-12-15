@@ -290,3 +290,66 @@ class TestMigrations:
             assert tasks[0].description == "Test"
 
             await storage2.close()
+
+
+class TestWithRetryDecorator:
+    """Tests for the with_retry decorator."""
+
+    @pytest.mark.asyncio
+    async def test_retry_on_transient_failure(self):
+        """Test retry decorator retries on transient failures."""
+        import aiosqlite
+
+        from todo_bot.storage.sqlite import with_retry
+
+        call_count = 0
+
+        @with_retry(max_retries=2, delay=0.01)
+        async def flaky_operation():
+            nonlocal call_count
+            call_count += 1
+            if call_count < 3:
+                raise aiosqlite.Error("Transient error")
+            return "success"
+
+        result = await flaky_operation()
+        assert result == "success"
+        assert call_count == 3
+
+    @pytest.mark.asyncio
+    async def test_retry_exhausted(self):
+        """Test retry decorator raises after max retries."""
+        import aiosqlite
+
+        from todo_bot.exceptions import StorageOperationError  # noqa: F401
+        from todo_bot.storage.sqlite import with_retry
+
+        call_count = 0
+
+        @with_retry(max_retries=2, delay=0.01)
+        async def always_fails():
+            nonlocal call_count
+            call_count += 1
+            raise aiosqlite.Error("Persistent error")
+
+        with pytest.raises(StorageOperationError, match="failed after"):
+            await always_fails()
+
+        assert call_count == 3  # Initial + 2 retries
+
+    @pytest.mark.asyncio
+    async def test_retry_success_first_try(self):
+        """Test retry decorator succeeds on first try."""
+        from todo_bot.storage.sqlite import with_retry
+
+        call_count = 0
+
+        @with_retry(max_retries=2, delay=0.01)
+        async def succeeds():
+            nonlocal call_count
+            call_count += 1
+            return "success"
+
+        result = await succeeds()
+        assert result == "success"
+        assert call_count == 1

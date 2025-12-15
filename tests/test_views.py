@@ -474,3 +474,125 @@ class TestCreateTaskListView:
         assert view.user_id == TEST_USER_ID
         assert view.server_id == TEST_SERVER_ID
         assert view.channel_id == TEST_CHANNEL_ID
+
+
+class TestViewHttpErrors:
+    """Tests for HTTP error handling in views."""
+
+    @pytest.mark.asyncio
+    async def test_view_refresh_rate_limited(self) -> None:
+        """Test refresh when rate limited (429 error)."""
+        import discord
+
+        tasks = [create_task(id=1)]
+        storage = MagicMock()
+        storage.get_tasks = AsyncMock(return_value=[])
+
+        view = TaskListView(
+            tasks=tasks,
+            storage=storage,
+            user_id=TEST_USER_ID,
+            server_id=TEST_SERVER_ID,
+            channel_id=TEST_CHANNEL_ID,
+        )
+
+        # Create a mock HTTPException with status 429
+        mock_response = MagicMock()
+        mock_response.status = 429
+        http_error = discord.errors.HTTPException(mock_response, "Rate limited")
+        http_error.status = 429
+
+        interaction = MagicMock()
+        interaction.message = MagicMock()
+        interaction.message.edit = AsyncMock(side_effect=http_error)
+
+        # Should not raise
+        await view.refresh(interaction)
+
+    @pytest.mark.asyncio
+    async def test_view_refresh_other_http_error(self) -> None:
+        """Test refresh with other HTTP error."""
+        import discord
+
+        tasks = [create_task(id=1)]
+        storage = MagicMock()
+        storage.get_tasks = AsyncMock(return_value=[])
+
+        view = TaskListView(
+            tasks=tasks,
+            storage=storage,
+            user_id=TEST_USER_ID,
+            server_id=TEST_SERVER_ID,
+            channel_id=TEST_CHANNEL_ID,
+        )
+
+        # Create a mock HTTPException with status 500
+        mock_response = MagicMock()
+        mock_response.status = 500
+        http_error = discord.errors.HTTPException(mock_response, "Server error")
+        http_error.status = 500
+
+        interaction = MagicMock()
+        interaction.message = MagicMock()
+        interaction.message.edit = AsyncMock(side_effect=http_error)
+
+        # Should not raise
+        await view.refresh(interaction)
+
+    @pytest.mark.asyncio
+    async def test_view_on_timeout_rate_limited(self) -> None:
+        """Test timeout when rate limited (429 error)."""
+        import discord
+
+        tasks = [create_task(id=1)]
+        storage = MagicMock()
+
+        view = TaskListView(
+            tasks=tasks,
+            storage=storage,
+            user_id=TEST_USER_ID,
+            server_id=TEST_SERVER_ID,
+            channel_id=TEST_CHANNEL_ID,
+        )
+
+        # Create a mock HTTPException with status 429
+        mock_response = MagicMock()
+        mock_response.status = 429
+        http_error = discord.errors.HTTPException(mock_response, "Rate limited")
+        http_error.status = 429
+
+        message = MagicMock()
+        message.edit = AsyncMock(side_effect=http_error)
+        view.set_message(message)
+
+        # Should not raise
+        await view.on_timeout()
+
+    @pytest.mark.asyncio
+    async def test_view_on_timeout_other_http_error(self) -> None:
+        """Test timeout with other HTTP error."""
+        import discord
+
+        tasks = [create_task(id=1)]
+        storage = MagicMock()
+
+        view = TaskListView(
+            tasks=tasks,
+            storage=storage,
+            user_id=TEST_USER_ID,
+            server_id=TEST_SERVER_ID,
+            channel_id=TEST_CHANNEL_ID,
+        )
+
+        # Create a mock HTTPException with status 500
+        mock_response = MagicMock()
+        mock_response.status = 500
+        http_error = discord.errors.HTTPException(mock_response, "Server error")
+        http_error.status = 500
+
+        message = MagicMock()
+        message.edit = AsyncMock(side_effect=http_error)
+        view.set_message(message)
+
+        # Should not raise
+        await view.on_timeout()

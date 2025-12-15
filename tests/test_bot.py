@@ -128,6 +128,24 @@ class TestTodoBot:
 
         mock_storage.close.assert_called_once()
 
+    @pytest.mark.asyncio
+    async def test_close_with_storage_error(self, caplog) -> None:
+        """Test bot close handles storage error gracefully."""
+        mock_storage = MagicMock()
+        mock_storage.close = AsyncMock(side_effect=Exception("Storage close failed"))
+
+        bot = TodoBot(storage=mock_storage)
+
+        with (
+            patch.object(bot.__class__.__bases__[0], "close", new=AsyncMock()),
+            caplog.at_level(logging.ERROR),
+        ):
+            await bot.close()
+
+        # Should log error but not raise
+        mock_storage.close.assert_called_once()
+        assert "Error closing storage" in caplog.text
+
 
 class TestCreateBot:
     """Tests for create_bot function."""

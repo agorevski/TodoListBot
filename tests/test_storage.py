@@ -482,3 +482,37 @@ class TestSQLiteTaskStorage:
         """Test that close works even without a connection."""
         storage = SQLiteTaskStorage(db_path="nonexistent.db")
         await storage.close()  # Should not raise
+
+
+class TestTaskStorageContextManager:
+    """Tests for TaskStorage async context manager protocol."""
+
+    @pytest.mark.asyncio
+    async def test_context_manager_enter_exit(self, tmp_path) -> None:
+        """Test async context manager initializes and closes storage."""
+        db_path = str(tmp_path / "test.db")
+        storage = SQLiteTaskStorage(db_path=db_path)
+
+        async with storage:
+            # Verify storage is initialized
+            assert storage._connection is not None
+            # Can perform operations
+            stats = await storage.get_stats()
+            assert "schema_version" in stats
+
+        # Verify storage is closed after exiting
+        assert storage._connection is None
+
+    @pytest.mark.asyncio
+    async def test_context_manager_with_exception(self, tmp_path) -> None:
+        """Test context manager closes storage even on exception."""
+        db_path = str(tmp_path / "test.db")
+        storage = SQLiteTaskStorage(db_path=db_path)
+
+        with pytest.raises(ValueError):
+            async with storage:
+                assert storage._connection is not None
+                raise ValueError("Test exception")
+
+        # Verify storage is closed after exception
+        assert storage._connection is None
