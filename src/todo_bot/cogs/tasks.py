@@ -123,7 +123,7 @@ class TasksCog(commands.Cog):
         )
 
         logger.info("Task #%s created for user %s", task.id, interaction.user.id)
-        await interaction.response.send_message(format_task_added(task))
+        await interaction.response.send_message(format_task_added(task), ephemeral=True)
 
     @app_commands.command(name="list", description="List your tasks")
     @app_commands.describe(
@@ -351,7 +351,8 @@ class TasksCog(commands.Cog):
                 interaction.user.id,
             )
             await interaction.response.send_message(
-                format_task_updated(task_id, description, task_priority)
+                format_task_updated(task_id, description, task_priority),
+                ephemeral=True,
             )
         else:
             await interaction.response.send_message(
@@ -409,7 +410,7 @@ class TasksCog(commands.Cog):
                 task_id,
                 interaction.user.id,
             )
-            await interaction.response.send_message(format_task_deleted(task))
+            await interaction.response.send_message(format_task_deleted(task), ephemeral=True)
         else:
             await interaction.response.send_message(
                 format_task_not_found(task_id),

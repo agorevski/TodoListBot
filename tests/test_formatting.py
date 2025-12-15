@@ -88,7 +88,7 @@ class TestFormatTasks:
         assert a_pos < b_pos < c_pos
 
     def test_format_tasks_with_completed(self) -> None:
-        """Test formatting tasks with completed items (strikethrough)."""
+        """Test formatting tasks with completed items (strikethrough on single line)."""
         tasks = [
             create_task(id=1, description="Done task", priority=Priority.A, done=True),
             create_task(
@@ -97,7 +97,9 @@ class TestFormatTasks:
         ]
         result = format_tasks(tasks)
 
-        assert "~~1. Done task~~" in result
+        # Completed tasks are shown on a single line with just the description
+        assert "~~Done task~~" in result
+        # Pending tasks still show with ID
         assert "2. Pending task" in result
 
     def test_format_tasks_custom_date_header(self) -> None:

@@ -95,6 +95,10 @@ def _group_tasks_by_priority(tasks: list[Task]) -> dict[Priority, list[Task]]:
 def _format_priority_section(priority: Priority, tasks: list[Task]) -> str:
     """Format a single priority section with its tasks.
 
+    Incomplete tasks are shown first, each on its own line.
+    Completed tasks are shown at the bottom on a single line,
+    separated by pipes: ~~task1~~ | ~~task2~~ | ~~task3~~
+
     Args:
         priority: The priority level
         tasks: Tasks in this priority group
@@ -104,8 +108,20 @@ def _format_priority_section(priority: Priority, tasks: list[Task]) -> str:
     """
     lines = [priority.display_name]
 
-    for task in tasks:
+    # Separate incomplete and completed tasks
+    incomplete_tasks = [t for t in tasks if not t.done]
+    completed_tasks = [t for t in tasks if t.done]
+
+    # Add incomplete tasks, each on its own line
+    for task in incomplete_tasks:
         lines.append(task.display_text)
+
+    # Add completed tasks on a single line with pipes
+    if completed_tasks:
+        completed_text = " | ".join(
+            f"~~{task.description}~~" for task in completed_tasks
+        )
+        lines.append(completed_text)
 
     return "\n".join(lines)
 
