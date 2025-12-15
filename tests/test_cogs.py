@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from todo_bot.models.task import Task, Priority, MAX_DESCRIPTION_LENGTH
 from todo_bot.cogs.tasks import TasksCog
+from todo_bot.models.task import MAX_DESCRIPTION_LENGTH, Priority, Task
 
 # Test constants
 TEST_SERVER_ID = 123456789
@@ -379,9 +379,7 @@ class TestCogErrorHandling:
         """Test cooldown error handling."""
         from discord import app_commands
 
-        error = app_commands.CommandOnCooldown(
-            cooldown=MagicMock(), retry_after=5.0
-        )
+        error = app_commands.CommandOnCooldown(cooldown=MagicMock(), retry_after=5.0)
 
         await cog.cog_app_command_error(mock_interaction, error)
 

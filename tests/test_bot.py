@@ -48,13 +48,15 @@ class TestTodoBot:
 
         bot = TodoBot(storage=mock_storage)
 
-        with patch.object(bot, "add_cog", new=AsyncMock()) as mock_add_cog:
-            with patch.object(bot.tree, "sync", new=AsyncMock()) as mock_sync:
-                await bot.setup_hook()
+        with (
+            patch.object(bot, "add_cog", new=AsyncMock()) as mock_add_cog,
+            patch.object(bot.tree, "sync", new=AsyncMock()) as mock_sync,
+        ):
+            await bot.setup_hook()
 
-                mock_storage.initialize.assert_called_once()
-                mock_add_cog.assert_called_once()
-                mock_sync.assert_called_once()
+            mock_storage.initialize.assert_called_once()
+            mock_add_cog.assert_called_once()
+            mock_sync.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_setup_hook_skip_sync(self) -> None:
@@ -68,13 +70,15 @@ class TestTodoBot:
         )
         bot = TodoBot(config=config, storage=mock_storage)
 
-        with patch.object(bot, "add_cog", new=AsyncMock()) as mock_add_cog:
-            with patch.object(bot.tree, "sync", new=AsyncMock()) as mock_sync:
-                await bot.setup_hook()
+        with (
+            patch.object(bot, "add_cog", new=AsyncMock()) as mock_add_cog,
+            patch.object(bot.tree, "sync", new=AsyncMock()) as mock_sync,
+        ):
+            await bot.setup_hook()
 
-                mock_storage.initialize.assert_called_once()
-                mock_add_cog.assert_called_once()
-                mock_sync.assert_not_called()
+            mock_storage.initialize.assert_called_once()
+            mock_add_cog.assert_called_once()
+            mock_sync.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_on_ready(self, caplog) -> None:
@@ -155,39 +159,43 @@ class TestRunBot:
 
     def test_run_bot_no_token(self) -> None:
         """Test run_bot raises when no token is provided."""
-        with patch.dict("os.environ", {}, clear=True):
-            with patch("dotenv.load_dotenv"):
-                with pytest.raises(ValueError, match="DISCORD_TOKEN"):
-                    run_bot()
+        with (
+            patch.dict("os.environ", {}, clear=True),
+            patch("dotenv.load_dotenv"),
+            pytest.raises(ValueError, match="DISCORD_TOKEN"),
+        ):
+            run_bot()
 
     def test_run_bot_with_env_token(self) -> None:
         """Test run_bot uses environment variable token."""
-        with patch.dict(
-            "os.environ",
-            {"DISCORD_TOKEN": "test_token"},
-            clear=True,
+        with (
+            patch.dict(
+                "os.environ",
+                {"DISCORD_TOKEN": "test_token"},
+                clear=True,
+            ),
+            patch("dotenv.load_dotenv"),
+            patch("todo_bot.bot.create_bot") as mock_create,
         ):
-            with patch("dotenv.load_dotenv"):
-                with patch(
-                    "todo_bot.bot.create_bot"
-                ) as mock_create:
-                    mock_bot = MagicMock()
-                    mock_create.return_value = mock_bot
+            mock_bot = MagicMock()
+            mock_create.return_value = mock_bot
 
-                    run_bot()
+            run_bot()
 
-                    mock_bot.run.assert_called_once_with("test_token")
+            mock_bot.run.assert_called_once_with("test_token")
 
     def test_run_bot_with_direct_token(self) -> None:
         """Test run_bot uses directly provided token."""
-        with patch("dotenv.load_dotenv"):
-            with patch("todo_bot.bot.create_bot") as mock_create:
-                mock_bot = MagicMock()
-                mock_create.return_value = mock_bot
+        with (
+            patch("dotenv.load_dotenv"),
+            patch("todo_bot.bot.create_bot") as mock_create,
+        ):
+            mock_bot = MagicMock()
+            mock_create.return_value = mock_bot
 
-                run_bot(token="direct_token")
+            run_bot(token="direct_token")
 
-                mock_bot.run.assert_called_once_with("direct_token")
+            mock_bot.run.assert_called_once_with("direct_token")
 
 
 class TestSetupLogging:

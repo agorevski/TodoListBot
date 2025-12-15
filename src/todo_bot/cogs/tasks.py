@@ -3,26 +3,25 @@
 import logging
 import time
 from datetime import date, datetime
-from typing import Optional
 
 import discord
 from discord import app_commands
 from discord.ext import commands
 
 from ..config import (
+    MAX_DESCRIPTION_LENGTH,
     RATE_LIMIT_COMMANDS,
     RATE_LIMIT_SECONDS,
-    MAX_DESCRIPTION_LENGTH,
 )
 from ..models.task import Priority
 from ..storage.base import TaskStorage
 from ..utils.formatting import (
     format_task_added,
+    format_task_deleted,
     format_task_done,
     format_task_not_found,
-    format_tasks_cleared,
-    format_task_deleted,
     format_task_updated,
+    format_tasks_cleared,
 )
 from ..views.task_view import TaskListView
 
@@ -31,9 +30,6 @@ logger = logging.getLogger(__name__)
 
 class TasksCog(commands.Cog):
     """Cog containing task management slash commands."""
-
-    # Class-level start time tracking (shared across instances but not global)
-    _start_time: Optional[float] = None
 
     def __init__(self, bot: commands.Bot, storage: TaskStorage) -> None:
         """Initialize the tasks cog.
@@ -44,25 +40,19 @@ class TasksCog(commands.Cog):
         """
         self.bot = bot
         self.storage = storage
-        # Set start time on first instantiation
-        if TasksCog._start_time is None:
-            TasksCog._start_time = time.time()
+        self._start_time: float = time.time()
 
-    @classmethod
-    def get_uptime(cls) -> float:
+    def get_uptime(self) -> float:
         """Get bot uptime in seconds.
 
         Returns:
-            Uptime in seconds, or 0.0 if not started
+            Uptime in seconds since cog instantiation
         """
-        if cls._start_time is None:
-            return 0.0
-        return time.time() - cls._start_time
+        return time.time() - self._start_time
 
-    @classmethod
-    def reset_start_time(cls) -> None:
+    def reset_start_time(self) -> None:
         """Reset start time (useful for testing)."""
-        cls._start_time = None
+        self._start_time = time.time()
 
     @app_commands.command(name="add", description="Add a new task")
     @app_commands.describe(
@@ -145,7 +135,7 @@ class TasksCog(commands.Cog):
     async def list_tasks(
         self,
         interaction: discord.Interaction,
-        date_str: Optional[str] = None,
+        date_str: str | None = None,
     ) -> None:
         """List tasks for the current user.
 
@@ -284,8 +274,8 @@ class TasksCog(commands.Cog):
         self,
         interaction: discord.Interaction,
         task_id: int,
-        description: Optional[str] = None,
-        priority: Optional[str] = None,
+        description: str | None = None,
+        priority: str | None = None,
     ) -> None:
         """Edit a task's description and/or priority.
 
@@ -319,7 +309,7 @@ class TasksCog(commands.Cog):
             return
 
         # Parse priority if provided
-        task_priority: Optional[Priority] = None
+        task_priority: Priority | None = None
         if priority:
             try:
                 task_priority = Priority.from_string(priority)

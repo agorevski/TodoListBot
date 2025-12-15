@@ -4,7 +4,8 @@ from datetime import date, timedelta
 
 import pytest
 
-from todo_bot.models.task import Task, Priority, MAX_DESCRIPTION_LENGTH
+from todo_bot.models.task import MAX_DESCRIPTION_LENGTH, Priority, Task
+
 
 class TestPriority:
     """Tests for the Priority enum."""
@@ -54,6 +55,7 @@ class TestPriority:
 
         with pytest.raises(ValueError, match="Invalid priority"):
             Priority.from_string("invalid")
+
 
 class TestTask:
     """Tests for the Task dataclass."""

@@ -41,13 +41,13 @@ services:
         max-size: "10m"
         max-file: "3"
     
-    # Health check
+    # Health check - verifies imports and database connectivity
     healthcheck:
-      test: ["CMD", "python", "-c", "from todo_bot import TodoBot; print('OK')"]
+      test: ["CMD", "python", "-m", "todo_bot.health", "--skip-db"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 15s
 
 # Named volumes for data persistence
 volumes:

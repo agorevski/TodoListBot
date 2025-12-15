@@ -1,17 +1,17 @@
 """Extended tests for cog commands covering new features."""
 
-from datetime import date
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from todo_bot.cogs.tasks import TasksCog
-from todo_bot.models.task import Task, Priority
+from todo_bot.models.task import Priority, Task
 
 # Test constants
 SERVER_ID = 123
 CHANNEL_ID = 456
 USER_ID = 789
+
 
 def create_mock_interaction(guild: bool = True):
     """Create a mock Discord interaction."""
@@ -29,6 +29,7 @@ def create_mock_interaction(guild: bool = True):
     interaction.original_response = AsyncMock()
     return interaction
 
+
 def create_sample_task(id: int = 1):
     """Create a sample task for testing."""
     return Task(
@@ -39,6 +40,7 @@ def create_sample_task(id: int = 1):
         channel_id=CHANNEL_ID,
         user_id=USER_ID,
     )
+
 
 class TestGetUptime:
     """Tests for TasksCog.get_uptime class method."""
@@ -53,6 +55,7 @@ class TestGetUptime:
         TasksCog.reset_start_time()
         uptime = TasksCog.get_uptime()
         assert uptime == 0.0
+
 
 class TestEditTaskCommand:
     """Tests for the /edit command."""
@@ -71,11 +74,13 @@ class TestEditTaskCommand:
         storage = MagicMock()
         storage.get_task_by_id = AsyncMock()
         storage.update_task = AsyncMock(return_value=True)
-        storage.get_stats = AsyncMock(return_value={
-            "total_tasks": 10,
-            "unique_users": 5,
-            "schema_version": 1,
-        })
+        storage.get_stats = AsyncMock(
+            return_value={
+                "total_tasks": 10,
+                "unique_users": 5,
+                "schema_version": 1,
+            }
+        )
         return storage
 
     @pytest.fixture
@@ -127,7 +132,7 @@ class TestEditTaskCommand:
         assert call_kwargs["priority"] == Priority.C
 
     @pytest.mark.asyncio
-    async def test_edit_task_no_changes(self, cog, mock_storage):
+    async def test_edit_task_no_changes(self, cog, mock_storage):  # noqa: ARG002
         """Test edit with no changes shows error."""
         interaction = create_mock_interaction()
 
@@ -148,7 +153,7 @@ class TestEditTaskCommand:
         assert "not found" in interaction.response.send_message.call_args[0][0].lower()
 
     @pytest.mark.asyncio
-    async def test_edit_task_no_guild(self, cog, mock_storage):
+    async def test_edit_task_no_guild(self, cog, mock_storage):  # noqa: ARG002
         """Test edit in DM fails."""
         interaction = create_mock_interaction(guild=False)
 
@@ -158,7 +163,11 @@ class TestEditTaskCommand:
         assert "server" in interaction.response.send_message.call_args[0][0].lower()
 
     @pytest.mark.asyncio
-    async def test_edit_task_description_too_long(self, cog, mock_storage):
+    async def test_edit_task_description_too_long(
+        self,
+        cog,
+        _mock_storage,
+    ):
         """Test edit with too long description."""
         interaction = create_mock_interaction()
         long_desc = "x" * 600
@@ -192,6 +201,7 @@ class TestEditTaskCommand:
         interaction.response.send_message.assert_called_once()
         assert "not found" in interaction.response.send_message.call_args[0][0].lower()
 
+
 class TestStatusCommand:
     """Tests for the /status command."""
 
@@ -207,12 +217,14 @@ class TestStatusCommand:
     def mock_storage(self):
         """Create a mock storage."""
         storage = MagicMock()
-        storage.get_stats = AsyncMock(return_value={
-            "total_tasks": 100,
-            "unique_users": 10,
-            "schema_version": 1,
-            "database_path": "test.db",
-        })
+        storage.get_stats = AsyncMock(
+            return_value={
+                "total_tasks": 100,
+                "unique_users": 10,
+                "schema_version": 1,
+                "database_path": "test.db",
+            }
+        )
         return storage
 
     @pytest.fixture
@@ -221,7 +233,7 @@ class TestStatusCommand:
         return TasksCog(mock_bot, mock_storage)
 
     @pytest.mark.asyncio
-    async def test_status_command(self, cog, mock_storage):
+    async def test_status_command(self, cog, mock_storage):  # noqa: ARG002
         """Test status command returns embed."""
         interaction = create_mock_interaction()
 

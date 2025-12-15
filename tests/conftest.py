@@ -3,16 +3,15 @@
 import asyncio
 import os
 import tempfile
+from collections.abc import AsyncGenerator, Generator
 from datetime import date
-from typing import AsyncGenerator, Generator, Optional
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 import pytest_asyncio
 
-from todo_bot.models.task import Task, Priority
+from todo_bot.models.task import Priority, Task
 from todo_bot.storage.sqlite import SQLiteTaskStorage
-
 
 # =============================================================================
 # Centralized test constants - import these in test files
@@ -28,6 +27,7 @@ TEST_OTHER_USER_ID = 999999999
 # Event loop fixture
 # =============================================================================
 
+
 @pytest.fixture(scope="session")
 def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
     """Create an event loop for the test session."""
@@ -39,6 +39,7 @@ def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
 # =============================================================================
 # Storage fixtures
 # =============================================================================
+
 
 @pytest_asyncio.fixture
 async def storage() -> AsyncGenerator[SQLiteTaskStorage, None]:
@@ -64,12 +65,14 @@ def mock_storage() -> MagicMock:
     storage.clear_completed_tasks = AsyncMock(return_value=0)
     storage.delete_task = AsyncMock(return_value=True)
     storage.cleanup_old_tasks = AsyncMock(return_value=0)
-    storage.get_stats = AsyncMock(return_value={
-        "total_tasks": 100,
-        "unique_users": 10,
-        "schema_version": 1,
-        "database_path": "test.db",
-    })
+    storage.get_stats = AsyncMock(
+        return_value={
+            "total_tasks": 100,
+            "unique_users": 10,
+            "schema_version": 1,
+            "database_path": "test.db",
+        }
+    )
     storage.initialize = AsyncMock()
     storage.close = AsyncMock()
     return storage
@@ -78,6 +81,7 @@ def mock_storage() -> MagicMock:
 # =============================================================================
 # Task fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def sample_task() -> Task:
@@ -156,6 +160,7 @@ def sample_tasks() -> list[Task]:
 # Discord mock fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def mock_interaction() -> MagicMock:
     """Create a mock Discord interaction."""
@@ -187,12 +192,13 @@ def mock_bot() -> MagicMock:
 # Helper functions for creating test data
 # =============================================================================
 
+
 def create_test_task(
     id: int = 1,
     description: str = "Test task",
     priority: Priority = Priority.A,
     done: bool = False,
-    task_date: Optional[date] = None,
+    task_date: date | None = None,
     server_id: int = TEST_SERVER_ID,
     channel_id: int = TEST_CHANNEL_ID,
     user_id: int = TEST_USER_ID,

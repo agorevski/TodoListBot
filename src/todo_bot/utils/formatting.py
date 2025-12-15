@@ -1,11 +1,12 @@
 """Formatting utilities for displaying tasks in Discord."""
 
 from datetime import date
-from typing import Dict, List, Optional
+from typing import Optional
 
-from ..models.task import Task, Priority
+from ..models.task import Priority, Task
 
-def format_tasks(tasks: List[Task], task_date: Optional[date] = None) -> str:
+
+def format_tasks(tasks: list[Task], task_date: date | None = None) -> str:
     """Format a list of tasks for display in Discord.
 
     Tasks are grouped by priority (A, B, C) with completed tasks
@@ -36,6 +37,7 @@ def format_tasks(tasks: List[Task], task_date: Optional[date] = None) -> str:
 
     return f"{header}\n\n" + "\n\n".join(sections)
 
+
 def _format_header(task_date: date) -> str:
     """Format the header for the task list.
 
@@ -50,7 +52,8 @@ def _format_header(task_date: date) -> str:
     else:
         return f"**Tasks for {task_date.strftime('%B %d, %Y')}**"
 
-def _format_empty_message(task_date: Optional[date] = None) -> str:
+
+def _format_empty_message(task_date: date | None = None) -> str:
     """Format a message for when there are no tasks.
 
     Args:
@@ -63,7 +66,8 @@ def _format_empty_message(task_date: Optional[date] = None) -> str:
         return f"📋 No tasks for {task_date.strftime('%B %d, %Y')}."
     return "📋 No tasks for today. Use `/add` to create one!"
 
-def _group_tasks_by_priority(tasks: List[Task]) -> Dict[Priority, List[Task]]:
+
+def _group_tasks_by_priority(tasks: list[Task]) -> dict[Priority, list[Task]]:
     """Group tasks by their priority level.
 
     Within each priority group, incomplete tasks come before completed tasks.
@@ -74,7 +78,7 @@ def _group_tasks_by_priority(tasks: List[Task]) -> Dict[Priority, List[Task]]:
     Returns:
         Dictionary mapping priority to list of tasks
     """
-    grouped: Dict[Priority, List[Task]] = {}
+    grouped: dict[Priority, list[Task]] = {}
 
     for task in tasks:
         if task.priority not in grouped:
@@ -87,7 +91,8 @@ def _group_tasks_by_priority(tasks: List[Task]) -> Dict[Priority, List[Task]]:
 
     return grouped
 
-def _format_priority_section(priority: Priority, tasks: List[Task]) -> str:
+
+def _format_priority_section(priority: Priority, tasks: list[Task]) -> str:
     """Format a single priority section with its tasks.
 
     Args:
@@ -104,6 +109,7 @@ def _format_priority_section(priority: Priority, tasks: List[Task]) -> str:
 
     return "\n".join(lines)
 
+
 def format_task_added(task: Task) -> str:
     """Format a confirmation message for a newly added task.
 
@@ -114,6 +120,7 @@ def format_task_added(task: Task) -> str:
         Confirmation message string
     """
     return f"Added task #{task.id}: {task.description} ✅"
+
 
 def format_task_done(task: Task) -> str:
     """Format a confirmation message for a completed task.
@@ -126,6 +133,7 @@ def format_task_done(task: Task) -> str:
     """
     return f"Task #{task.id} marked as done ✅"
 
+
 def format_task_undone(task: Task) -> str:
     """Format a confirmation message for a task marked as undone.
 
@@ -136,6 +144,7 @@ def format_task_undone(task: Task) -> str:
         Confirmation message string
     """
     return f"Task #{task.id} marked as not done ↩️"
+
 
 def format_tasks_cleared(count: int) -> str:
     """Format a confirmation message for cleared tasks.
@@ -152,6 +161,7 @@ def format_tasks_cleared(count: int) -> str:
         return "Cleared 1 completed task ✅"
     else:
         return f"Cleared {count} completed tasks ✅"
+
 
 def format_task_deleted(task: Task) -> str:
     """Format a confirmation message for a deleted task.
@@ -179,7 +189,7 @@ def format_task_not_found(task_id: int) -> str:
 
 def format_task_updated(
     task_id: int,
-    description: Optional[str] = None,
+    description: str | None = None,
     priority: Optional["Priority"] = None,
 ) -> str:
     """Format a confirmation message for an updated task.
@@ -194,7 +204,7 @@ def format_task_updated(
     """
     changes = []
     if description is not None:
-        changes.append(f"description to \"{description}\"")
+        changes.append(f'description to "{description}"')
     if priority is not None:
         changes.append(f"priority to {priority.value}")
 

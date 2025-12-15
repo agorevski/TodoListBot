@@ -1,14 +1,13 @@
 """Extended tests for formatting module covering new features."""
 
-import pytest
-
-from todo_bot.models.task import Task, Priority
+from todo_bot.models.task import Priority, Task
 from todo_bot.utils.formatting import format_task_updated
 
 # Test constants
 SERVER_ID = 123
 CHANNEL_ID = 456
 USER_ID = 789
+
 
 def create_task(id: int = 1):
     """Create a sample task for testing."""
@@ -20,6 +19,7 @@ def create_task(id: int = 1):
         channel_id=CHANNEL_ID,
         user_id=USER_ID,
     )
+
 
 class TestFormatTaskUpdated:
     """Tests for format_task_updated function."""

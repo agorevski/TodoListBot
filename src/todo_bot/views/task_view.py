@@ -2,21 +2,21 @@
 
 import logging
 from datetime import date
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
 import discord
 
 from ..config import (
-    VIEW_TIMEOUT_SECONDS,
-    MAX_BUTTONS_PER_VIEW,
     BUTTONS_PER_ROW,
+    MAX_BUTTONS_PER_VIEW,
+    VIEW_TIMEOUT_SECONDS,
 )
 from ..models.task import Task
 from ..utils.formatting import (
-    format_tasks,
     format_task_done,
-    format_task_undone,
     format_task_not_found,
+    format_task_undone,
+    format_tasks,
 )
 
 if TYPE_CHECKING:
@@ -59,7 +59,7 @@ class TaskButton(discord.ui.Button):
             label=label,
             emoji=emoji,
             custom_id=f"task_{task.id}_{task.server_id}_"
-                      f"{task.channel_id}_{task.user_id}",
+            f"{task.channel_id}_{task.user_id}",
             row=row,
         )
 
@@ -146,12 +146,12 @@ class TaskListView(discord.ui.View):
 
     def __init__(
         self,
-        tasks: List[Task],
+        tasks: list[Task],
         storage: "TaskStorage",
         user_id: int,
         server_id: int,
         channel_id: int,
-        task_date: Optional[date] = None,
+        task_date: date | None = None,
         timeout: float = VIEW_TIMEOUT_SECONDS,
     ) -> None:
         """Initialize the task list view.
@@ -172,7 +172,7 @@ class TaskListView(discord.ui.View):
         self.server_id = server_id
         self.channel_id = channel_id
         self.task_date = task_date or date.today()
-        self._message: Optional[discord.Message] = None
+        self._message: discord.Message | None = None
 
         logger.debug(
             "TaskListView created: %d tasks for user %d",
@@ -242,7 +242,7 @@ class TaskListView(discord.ui.View):
             if e.status == 429:  # Rate limited
                 logger.warning(
                     "Rate limited while refreshing view, retry after: %s",
-                    e.retry_after if hasattr(e, 'retry_after') else 'unknown',
+                    e.retry_after if hasattr(e, "retry_after") else "unknown",
                 )
             else:
                 logger.error("HTTP error while refreshing view: %s", e)
@@ -280,12 +280,12 @@ class TaskListView(discord.ui.View):
 
 
 def create_task_list_view(
-    tasks: List[Task],
+    tasks: list[Task],
     storage: "TaskStorage",
     user_id: int,
     server_id: int,
     channel_id: int,
-    task_date: Optional[date] = None,
+    task_date: date | None = None,
 ) -> TaskListView:
     """Create a new task list view.
 

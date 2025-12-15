@@ -1,13 +1,12 @@
 """Discord bot setup and configuration."""
 
 import logging
-from typing import Optional
 
 import discord
 from discord.ext import commands
 
-from .config import BotConfig, DEFAULT_DB_PATH
 from .cogs.tasks import TasksCog
+from .config import DEFAULT_DB_PATH, BotConfig
 from .storage.base import TaskStorage
 from .storage.sqlite import SQLiteTaskStorage
 
@@ -19,8 +18,8 @@ class TodoBot(commands.Bot):
 
     def __init__(
         self,
-        config: Optional[BotConfig] = None,
-        storage: Optional[TaskStorage] = None,
+        config: BotConfig | None = None,
+        storage: TaskStorage | None = None,
         command_prefix: str = "!",
         **kwargs,
     ) -> None:
@@ -54,7 +53,7 @@ class TodoBot(commands.Bot):
             logger.info("Using custom storage backend")
 
     @property
-    def config(self) -> Optional[BotConfig]:
+    def config(self) -> BotConfig | None:
         """Get the bot configuration."""
         return self._config
 
@@ -80,30 +79,30 @@ class TodoBot(commands.Bot):
             await self.tree.sync()
             logger.info("Slash commands synced globally")
         else:
-            logger.info(
-                "Skipping global command sync (sync_commands_globally=false)"
-            )
+            logger.info("Skipping global command sync (sync_commands_globally=false)")
 
     async def on_ready(self) -> None:
         """Handle the bot becoming ready."""
         if self.user:
-            logger.info(
-                "Logged in as %s (ID: %s)", self.user, self.user.id
-            )
+            logger.info("Logged in as %s (ID: %s)", self.user, self.user.id)
             logger.info("Connected to %d guild(s)", len(self.guilds))
 
     async def close(self) -> None:
         """Clean up resources when the bot shuts down."""
         logger.info("Shutting down bot...")
-        await self.storage.close()
-        logger.info("Storage closed")
-        await super().close()
-        logger.info("Bot shutdown complete")
+        try:
+            await self.storage.close()
+            logger.info("Storage closed")
+        except Exception as e:
+            logger.error("Error closing storage: %s", e)
+        finally:
+            await super().close()
+            logger.info("Bot shutdown complete")
 
 
 def create_bot(
-    config: Optional[BotConfig] = None,
-    storage: Optional[TaskStorage] = None,
+    config: BotConfig | None = None,
+    storage: TaskStorage | None = None,
 ) -> TodoBot:
     """Create and configure a new TodoBot instance.
 
@@ -134,7 +133,7 @@ def setup_logging(level: str = "INFO") -> None:
     logging.getLogger("discord.http").setLevel(logging.WARNING)
 
 
-def run_bot(token: Optional[str] = None) -> None:
+def run_bot(token: str | None = None) -> None:
     """Run the bot with the given token.
 
     Args:
@@ -142,12 +141,13 @@ def run_bot(token: Optional[str] = None) -> None:
                environment variable.
     """
     from dotenv import load_dotenv
+
     load_dotenv()
 
     # Load configuration from environment
     try:
         config = BotConfig.from_env()
-    except ValueError as e:
+    except ValueError:
         if token is None:
             raise
         # If token provided directly, create minimal config

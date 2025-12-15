@@ -4,14 +4,15 @@ from datetime import date, timedelta
 
 import pytest
 
-from todo_bot.models.task import Task, Priority
-from todo_bot.storage.sqlite import SQLiteTaskStorage
 from todo_bot.exceptions import StorageConnectionError
+from todo_bot.models.task import Priority
+from todo_bot.storage.sqlite import SQLiteTaskStorage
 
 # Use fixtures from conftest
 TEST_SERVER_ID = 123456789
 TEST_CHANNEL_ID = 987654321
 TEST_USER_ID = 111222333
+
 
 class TestSQLiteTaskStorage:
     """Tests for SQLiteTaskStorage class."""
@@ -407,7 +408,9 @@ class TestSQLiteTaskStorage:
         assert tasks[0].description == "Task 3"
 
     @pytest.mark.asyncio
-    async def test_clear_completed_tasks_empty(self, storage: SQLiteTaskStorage) -> None:
+    async def test_clear_completed_tasks_empty(
+        self, storage: SQLiteTaskStorage
+    ) -> None:
         """Test clearing when no completed tasks exist."""
         await storage.add_task(
             description="Incomplete task",

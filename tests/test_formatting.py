@@ -1,23 +1,20 @@
 """Tests for the formatting utilities."""
 
 from datetime import date
-from typing import Optional
 
-import pytest
-
-from todo_bot.models.task import Task, Priority
+from todo_bot.models.task import Priority, Task
 from todo_bot.utils.formatting import (
-    format_tasks,
-    format_task_added,
-    format_task_done,
-    format_task_undone,
-    format_tasks_cleared,
-    format_task_deleted,
-    format_task_not_found,
-    _format_header,
     _format_empty_message,
-    _group_tasks_by_priority,
+    _format_header,
     _format_priority_section,
+    _group_tasks_by_priority,
+    format_task_added,
+    format_task_deleted,
+    format_task_done,
+    format_task_not_found,
+    format_task_undone,
+    format_tasks,
+    format_tasks_cleared,
 )
 
 # Test constants
@@ -25,12 +22,13 @@ TEST_SERVER_ID = 123456789
 TEST_CHANNEL_ID = 987654321
 TEST_USER_ID = 111222333
 
+
 def create_task(
     id: int = 1,
     description: str = "Test task",
     priority: Priority = Priority.A,
     done: bool = False,
-    task_date: Optional[date] = None,
+    task_date: date | None = None,
 ) -> Task:
     """Helper to create a task for testing."""
     return Task(
@@ -43,6 +41,7 @@ def create_task(
         done=done,
         task_date=task_date or date.today(),
     )
+
 
 class TestFormatTasks:
     """Tests for format_tasks function."""
@@ -92,7 +91,9 @@ class TestFormatTasks:
         """Test formatting tasks with completed items (strikethrough)."""
         tasks = [
             create_task(id=1, description="Done task", priority=Priority.A, done=True),
-            create_task(id=2, description="Pending task", priority=Priority.A, done=False),
+            create_task(
+                id=2, description="Pending task", priority=Priority.A, done=False
+            ),
         ]
         result = format_tasks(tasks)
 
@@ -108,6 +109,7 @@ class TestFormatTasks:
         assert "December 25, 2024" in result
         assert "Today's Tasks" not in result
 
+
 class TestFormatHeader:
     """Tests for _format_header function."""
 
@@ -121,6 +123,7 @@ class TestFormatHeader:
         other_date = date(2024, 1, 15)
         result = _format_header(other_date)
         assert "January 15, 2024" in result
+
 
 class TestFormatEmptyMessage:
     """Tests for _format_empty_message function."""
@@ -141,6 +144,7 @@ class TestFormatEmptyMessage:
         other_date = date(2024, 6, 15)
         result = _format_empty_message(other_date)
         assert "June 15, 2024" in result
+
 
 class TestGroupTasksByPriority:
     """Tests for _group_tasks_by_priority function."""
@@ -188,6 +192,7 @@ class TestGroupTasksByPriority:
         assert result[Priority.A][0].id == 2
         assert result[Priority.A][1].id == 1
 
+
 class TestFormatPrioritySection:
     """Tests for _format_priority_section function."""
 
@@ -210,6 +215,7 @@ class TestFormatPrioritySection:
         assert "1. Task 1" in result
         assert "2. Task 2" in result
 
+
 class TestFormatTaskAdded:
     """Tests for format_task_added function."""
 
@@ -221,6 +227,7 @@ class TestFormatTaskAdded:
         assert "Added task #5" in result
         assert "New task" in result
         assert "✅" in result
+
 
 class TestFormatTaskDone:
     """Tests for format_task_done function."""
@@ -234,6 +241,7 @@ class TestFormatTaskDone:
         assert "done" in result
         assert "✅" in result
 
+
 class TestFormatTaskUndone:
     """Tests for format_task_undone function."""
 
@@ -245,6 +253,7 @@ class TestFormatTaskUndone:
         assert "Task #7" in result
         assert "not done" in result
         assert "↩️" in result
+
 
 class TestFormatTasksCleared:
     """Tests for format_tasks_cleared function."""
@@ -264,6 +273,7 @@ class TestFormatTasksCleared:
         """Test formatting when multiple tasks were cleared."""
         result = format_tasks_cleared(5)
         assert "Cleared 5 completed tasks" in result
+
 
 class TestFormatTaskDeleted:
     """Tests for format_task_deleted function."""

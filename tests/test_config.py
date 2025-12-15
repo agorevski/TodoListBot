@@ -6,18 +6,18 @@ from unittest.mock import patch
 import pytest
 
 from todo_bot.config import (
+    BUTTONS_PER_ROW,
+    CONNECTION_RETRY_DELAY_SECONDS,
+    DEFAULT_DB_PATH,
+    DEFAULT_RETENTION_DAYS,
+    MAX_BUTTONS_PER_VIEW,
+    MAX_CONNECTION_RETRIES,
     MAX_DESCRIPTION_LENGTH,
     MIN_DESCRIPTION_LENGTH,
     RATE_LIMIT_COMMANDS,
     RATE_LIMIT_SECONDS,
-    VIEW_TIMEOUT_SECONDS,
-    MAX_BUTTONS_PER_VIEW,
-    BUTTONS_PER_ROW,
-    DEFAULT_DB_PATH,
     SCHEMA_VERSION,
-    MAX_CONNECTION_RETRIES,
-    CONNECTION_RETRY_DELAY_SECONDS,
-    DEFAULT_RETENTION_DAYS,
+    VIEW_TIMEOUT_SECONDS,
     BotConfig,
 )
 
@@ -94,13 +94,16 @@ class TestBotConfig:
 
     def test_bot_config_from_env(self):
         """Test BotConfig.from_env() loads from environment."""
-        with patch.dict(os.environ, {
-            "DISCORD_TOKEN": "env_token",
-            "DATABASE_PATH": "env/db.db",
-            "LOG_LEVEL": "DEBUG",
-            "SYNC_COMMANDS_GLOBALLY": "false",
-            "RETENTION_DAYS": "60",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "DISCORD_TOKEN": "env_token",
+                "DATABASE_PATH": "env/db.db",
+                "LOG_LEVEL": "DEBUG",
+                "SYNC_COMMANDS_GLOBALLY": "false",
+                "RETENTION_DAYS": "60",
+            },
+        ):
             config = BotConfig.from_env()
 
             assert config.discord_token == "env_token"
@@ -111,9 +114,13 @@ class TestBotConfig:
 
     def test_bot_config_from_env_defaults(self):
         """Test BotConfig.from_env() uses defaults for missing values."""
-        with patch.dict(os.environ, {
-            "DISCORD_TOKEN": "token",
-        }, clear=True):
+        with patch.dict(
+            os.environ,
+            {
+                "DISCORD_TOKEN": "token",
+            },
+            clear=True,
+        ):
             config = BotConfig.from_env()
 
             assert config.discord_token == "token"

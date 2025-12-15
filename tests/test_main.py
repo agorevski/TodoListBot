@@ -1,14 +1,14 @@
 """Tests for the main entry point module."""
 
 import signal
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
 from todo_bot.main import (
     ShutdownHandler,
-    setup_signal_handlers,
     main,
+    setup_signal_handlers,
 )
 
 
@@ -65,8 +65,11 @@ class TestMain:
 
     def test_main_calls_run_bot(self) -> None:
         """Test main function calls run_bot."""
-        with patch("todo_bot.main.setup_signal_handlers"):
-            with patch("todo_bot.main.run_bot") as mock_run_bot:
-                main()
+        with (
+            patch("todo_bot.main.setup_signal_handlers"),
+            patch("todo_bot.main.register_cleanup"),
+            patch("todo_bot.main.run_bot") as mock_run_bot,
+        ):
+            main()
 
-                mock_run_bot.assert_called_once()
+            mock_run_bot.assert_called_once()

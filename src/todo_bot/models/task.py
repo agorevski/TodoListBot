@@ -81,13 +81,17 @@ class Task:
         if isinstance(self.priority, str):
             self.priority = Priority.from_string(self.priority)
 
-        # Ensure description is not empty
-        if not self.description or not self.description.strip():
-            raise ValueError("Task description cannot be empty")
+        # Normalize description
+        self.description = self.description.strip() if self.description else ""
 
-        self.description = self.description.strip()
+        # Validate minimum description length
+        if len(self.description) < MIN_DESCRIPTION_LENGTH:
+            raise ValueError(
+                f"Task description must be at least "
+                f"{MIN_DESCRIPTION_LENGTH} character(s)."
+            )
 
-        # Validate description length
+        # Validate maximum description length
         if len(self.description) > MAX_DESCRIPTION_LENGTH:
             desc_len = len(self.description)
             raise ValueError(
@@ -100,6 +104,17 @@ class Task:
             self.id,
             self.priority.value,
             self.user_id,
+        )
+
+    def __repr__(self) -> str:
+        """Return a developer-friendly string representation."""
+        return (
+            f"Task(id={self.id}, "
+            f"priority={self.priority.value}, "
+            f"done={self.done}, "
+            f"user_id={self.user_id}, "
+            f"description={self.description[:30]!r}"
+            f"{'...' if len(self.description) > 30 else ''})"
         )
 
     @property
@@ -162,9 +177,11 @@ class Task:
             description=data["description"],
             priority=Priority.from_string(data["priority"]),
             done=data.get("done", False),
-            task_date=date.fromisoformat(data["task_date"])
-            if isinstance(data.get("task_date"), str)
-            else data.get("task_date", date.today()),
+            task_date=(
+                date.fromisoformat(data["task_date"])
+                if isinstance(data.get("task_date"), str)
+                else data.get("task_date", date.today())
+            ),
             server_id=data["server_id"],
             channel_id=data["channel_id"],
             user_id=data["user_id"],

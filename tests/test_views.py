@@ -1,12 +1,11 @@
 """Tests for Discord UI views."""
 
-from datetime import date
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from todo_bot.models.task import Task, Priority
-from todo_bot.views.task_view import TaskListView, TaskButton, create_task_list_view
+from todo_bot.models.task import Priority, Task
+from todo_bot.views.task_view import TaskButton, TaskListView, create_task_list_view
 
 # Test constants
 TEST_SERVER_ID = 123456789

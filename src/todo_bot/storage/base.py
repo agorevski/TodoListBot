@@ -2,10 +2,10 @@
 
 from abc import ABC, abstractmethod
 from datetime import date
-from typing import List, Optional
 from types import TracebackType
 
-from ..models.task import Task, Priority
+from ..models.task import Priority, Task
+
 
 class TaskStorage(ABC):
     """Abstract base class defining the interface for task storage.
@@ -29,9 +29,9 @@ class TaskStorage(ABC):
 
     async def __aexit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> None:
         """Exit the async context manager.
 
@@ -67,7 +67,7 @@ class TaskStorage(ABC):
         server_id: int,
         channel_id: int,
         user_id: int,
-        task_date: Optional[date] = None,
+        task_date: date | None = None,
     ) -> Task:
         """Add a new task to storage.
 
@@ -93,9 +93,9 @@ class TaskStorage(ABC):
         server_id: int,
         channel_id: int,
         user_id: int,
-        task_date: Optional[date] = None,
+        task_date: date | None = None,
         include_done: bool = True,
-    ) -> List[Task]:
+    ) -> list[Task]:
         """Get tasks for a specific user in a channel.
 
         Args:
@@ -117,7 +117,7 @@ class TaskStorage(ABC):
         server_id: int,
         channel_id: int,
         user_id: int,
-    ) -> Optional[Task]:
+    ) -> Task | None:
         """Get a specific task by its ID.
 
         Args:
@@ -138,8 +138,8 @@ class TaskStorage(ABC):
         server_id: int,
         channel_id: int,
         user_id: int,
-        description: Optional[str] = None,
-        priority: Optional[Priority] = None,
+        description: str | None = None,
+        priority: Priority | None = None,
     ) -> bool:
         """Update a task's description and/or priority.
 
@@ -204,7 +204,7 @@ class TaskStorage(ABC):
         server_id: int,
         channel_id: int,
         user_id: int,
-        task_date: Optional[date] = None,
+        task_date: date | None = None,
     ) -> int:
         """Remove all completed tasks for a user.
 
