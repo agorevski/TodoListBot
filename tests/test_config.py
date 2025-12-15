@@ -44,7 +44,7 @@ class TestConstants:
     def test_database_constants(self):
         """Test database constants are set correctly."""
         assert DEFAULT_DB_PATH == "data/tasks.db"
-        assert SCHEMA_VERSION == 1
+        assert SCHEMA_VERSION == 2
 
     def test_connection_constants(self):
         """Test connection retry constants are set correctly."""

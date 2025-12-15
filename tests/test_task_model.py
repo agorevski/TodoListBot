@@ -121,7 +121,7 @@ class TestTask:
 
     def test_task_empty_description_raises(self) -> None:
         """Test that empty description raises ValueError."""
-        with pytest.raises(ValueError, match="cannot be empty"):
+        with pytest.raises(ValueError, match="at least 1 character"):
             Task(
                 id=1,
                 description="",
@@ -133,7 +133,7 @@ class TestTask:
 
     def test_task_whitespace_description_raises(self) -> None:
         """Test that whitespace-only description raises ValueError."""
-        with pytest.raises(ValueError, match="cannot be empty"):
+        with pytest.raises(ValueError, match="at least 1 character"):
             Task(
                 id=1,
                 description="   ",

@@ -216,7 +216,7 @@ class TestGetStats:
 
         assert stats["total_tasks"] == 0
         assert stats["unique_users"] == 0
-        assert stats["schema_version"] == 1
+        assert stats["schema_version"] == 2
         assert "database_path" in stats
 
     @pytest.mark.asyncio
@@ -249,7 +249,7 @@ class TestGetStats:
 
         assert stats["total_tasks"] == 3
         assert stats["unique_users"] == 2
-        assert stats["schema_version"] == 1
+        assert stats["schema_version"] == 2
 
 
 class TestMigrations:
@@ -261,12 +261,13 @@ class TestMigrations:
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "test.db")
             storage = SQLiteTaskStorage(db_path=db_path)
-            await storage.initialize()
+            try:
+                await storage.initialize()
 
-            stats = await storage.get_stats()
-            assert stats["schema_version"] == 1
-
-            await storage.close()
+                stats = await storage.get_stats()
+                assert stats["schema_version"] == 2
+            finally:
+                await storage.close()
 
     @pytest.mark.asyncio
     async def test_reinitialize_same_version(self):

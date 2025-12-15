@@ -32,6 +32,7 @@ class TaskButton(discord.ui.Button):
         self,
         task: Task,
         storage: "TaskStorage",
+        display_index: int,
         row: int = 0,
     ) -> None:
         """Initialize the task button.
@@ -39,20 +40,24 @@ class TaskButton(discord.ui.Button):
         Args:
             task: The task this button controls
             storage: The storage backend for task operations
+            display_index: The position-based display number for this task
             row: The row to place this button in (0-4)
         """
         self.task = task
         self.storage = storage
+        self.display_index = display_index
 
         # Use different style based on task status
         if task.done:
             style = discord.ButtonStyle.secondary
             emoji = "↩️"
-            label = f"Undo #{task.id}"
+            # Completed tasks don't have display numbers in the list,
+            # so just show "Undo" without a number
+            label = "Undo"
         else:
             style = discord.ButtonStyle.success
             emoji = "✅"
-            label = f"Done #{task.id}"
+            label = f"Done #{display_index}"
 
         super().__init__(
             style=style,
@@ -184,22 +189,67 @@ class TaskListView(discord.ui.View):
         self._add_task_buttons()
 
     def _add_task_buttons(self) -> None:
-        """Add buttons for each task in the list."""
+        """Add buttons for each task in the list.
+
+        Buttons are ordered to match the display: grouped by priority (A, B, C),
+        with incomplete tasks shown first in each group. Display indices are
+        assigned sequentially to incomplete tasks only.
+        """
         # Clear existing buttons
         self.clear_items()
 
-        # Discord limits: 5 rows, 5 buttons per row = 25 max buttons
-        tasks_to_show = self.tasks[:MAX_BUTTONS_PER_VIEW]
+        # Group and sort tasks the same way as format_tasks does
+        from ..models.task import Priority
 
-        for i, task in enumerate(tasks_to_show):
+        grouped: dict[Priority, list[Task]] = {}
+        for task in self.tasks:
+            if task.priority not in grouped:
+                grouped[task.priority] = []
+            grouped[task.priority].append(task)
+
+        # Sort each group: incomplete first, then completed (by id within each)
+        for priority in grouped:
+            grouped[priority] = sorted(
+                grouped[priority], key=lambda t: (t.done, t.id)
+            )
+
+        # Build ordered list matching the display order
+        ordered_tasks: list[tuple[Task, int | None]] = []
+        display_index = 1
+
+        for priority in [Priority.A, Priority.B, Priority.C]:
+            priority_tasks = grouped.get(priority, [])
+            for task in priority_tasks:
+                if not task.done:
+                    # Incomplete tasks get a display index
+                    ordered_tasks.append((task, display_index))
+                    display_index += 1
+                else:
+                    # Completed tasks don't have a display number
+                    ordered_tasks.append((task, None))
+
+        # Discord limits: 5 rows, 5 buttons per row = 25 max buttons
+        tasks_to_show = ordered_tasks[:MAX_BUTTONS_PER_VIEW]
+
+        for i, (task, task_display_index) in enumerate(tasks_to_show):
             row = i // BUTTONS_PER_ROW
-            button = TaskButton(task=task, storage=self.storage, row=row)
+            # For completed tasks, use a placeholder index (they show "Undo")
+            # We'll use the position in the ordered list + 1 for display
+            effective_index = (
+                task_display_index if task_display_index is not None else i + 1
+            )
+            button = TaskButton(
+                task=task,
+                storage=self.storage,
+                display_index=effective_index,
+                row=row,
+            )
             self.add_item(button)
 
-        if len(self.tasks) > MAX_BUTTONS_PER_VIEW:
+        if len(ordered_tasks) > MAX_BUTTONS_PER_VIEW:
             logger.warning(
                 "Task list truncated: %d tasks, showing %d",
-                len(self.tasks),
+                len(ordered_tasks),
                 MAX_BUTTONS_PER_VIEW,
             )
 

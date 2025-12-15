@@ -99,8 +99,8 @@ class TestFormatTasks:
 
         # Completed tasks are shown on a single line with just the description
         assert "~~Done task~~" in result
-        # Pending tasks still show with ID
-        assert "2. Pending task" in result
+        # Pending tasks show with position-based index (not database ID)
+        assert "1. Pending task" in result
 
     def test_format_tasks_custom_date_header(self) -> None:
         """Test that custom date shows in header."""
@@ -201,10 +201,11 @@ class TestFormatPrioritySection:
     def test_format_section_a_priority(self) -> None:
         """Test formatting A priority section."""
         tasks = [create_task(id=1, description="Task 1", priority=Priority.A)]
-        result = _format_priority_section(Priority.A, tasks)
+        section, next_index = _format_priority_section(Priority.A, tasks)
 
-        assert "🔴 **A-Priority**" in result
-        assert "1. Task 1" in result
+        assert "🔴 **A-Priority**" in section
+        assert "1. Task 1" in section
+        assert next_index == 2
 
     def test_format_section_multiple_tasks(self) -> None:
         """Test formatting section with multiple tasks."""
@@ -212,10 +213,31 @@ class TestFormatPrioritySection:
             create_task(id=1, description="Task 1", priority=Priority.B),
             create_task(id=2, description="Task 2", priority=Priority.B),
         ]
-        result = _format_priority_section(Priority.B, tasks)
+        section, next_index = _format_priority_section(Priority.B, tasks)
 
-        assert "1. Task 1" in result
-        assert "2. Task 2" in result
+        assert "1. Task 1" in section
+        assert "2. Task 2" in section
+        assert next_index == 3
+
+    def test_format_section_with_start_index(self) -> None:
+        """Test formatting section with custom start index."""
+        tasks = [create_task(id=5, description="Task 5", priority=Priority.C)]
+        section, next_index = _format_priority_section(Priority.C, tasks, start_index=3)
+
+        assert "3. Task 5" in section
+        assert next_index == 4
+
+    def test_format_section_completed_tasks_no_index(self) -> None:
+        """Test that completed tasks don't get index numbers."""
+        tasks = [
+            create_task(id=1, description="Done task", priority=Priority.A, done=True),
+        ]
+        section, next_index = _format_priority_section(Priority.A, tasks)
+
+        # Completed tasks shown as strikethrough without index
+        assert "~~Done task~~" in section
+        # Index doesn't increment for completed tasks
+        assert next_index == 1
 
 
 class TestFormatTaskAdded:

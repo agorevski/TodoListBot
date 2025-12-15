@@ -29,10 +29,13 @@ def format_tasks(tasks: list[Task], task_date: date | None = None) -> str:
     grouped = _group_tasks_by_priority(tasks)
 
     sections = []
+    current_index = 1
     for priority in [Priority.A, Priority.B, Priority.C]:
         priority_tasks = grouped.get(priority, [])
         if priority_tasks:
-            section = _format_priority_section(priority, priority_tasks)
+            section, current_index = _format_priority_section(
+                priority, priority_tasks, current_index
+            )
             sections.append(section)
 
     return f"{header}\n\n" + "\n\n".join(sections)
@@ -92,19 +95,24 @@ def _group_tasks_by_priority(tasks: list[Task]) -> dict[Priority, list[Task]]:
     return grouped
 
 
-def _format_priority_section(priority: Priority, tasks: list[Task]) -> str:
+def _format_priority_section(
+    priority: Priority,
+    tasks: list[Task],
+    start_index: int = 1,
+) -> tuple[str, int]:
     """Format a single priority section with its tasks.
 
-    Incomplete tasks are shown first, each on its own line.
-    Completed tasks are shown at the bottom on a single line,
+    Incomplete tasks are shown first, each on its own line with position-based
+    numbering. Completed tasks are shown at the bottom on a single line,
     separated by pipes: ~~task1~~ | ~~task2~~ | ~~task3~~
 
     Args:
         priority: The priority level
         tasks: Tasks in this priority group
+        start_index: Starting number for position-based display
 
     Returns:
-        Formatted section string
+        Tuple of (formatted section string, next available index)
     """
     lines = [priority.display_name]
 
@@ -112,18 +120,20 @@ def _format_priority_section(priority: Priority, tasks: list[Task]) -> str:
     incomplete_tasks = [t for t in tasks if not t.done]
     completed_tasks = [t for t in tasks if t.done]
 
-    # Add incomplete tasks, each on its own line
+    # Add incomplete tasks with position-based numbering
+    current_index = start_index
     for task in incomplete_tasks:
-        lines.append(task.display_text)
+        lines.append(f"{current_index}. {task.description}")
+        current_index += 1
 
-    # Add completed tasks on a single line with pipes
+    # Add completed tasks on a single line with pipes (no numbers)
     if completed_tasks:
         completed_text = " | ".join(
             f"~~{task.description}~~" for task in completed_tasks
         )
         lines.append(completed_text)
 
-    return "\n".join(lines)
+    return "\n".join(lines), current_index
 
 
 def format_task_added(task: Task) -> str:

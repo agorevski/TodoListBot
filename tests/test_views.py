@@ -40,21 +40,23 @@ class TestTaskButton:
         task = create_task(id=5, done=False)
         storage = MagicMock()
 
-        button = TaskButton(task=task, storage=storage)
+        button = TaskButton(task=task, storage=storage, display_index=1)
 
-        assert "Done #5" in button.label
+        assert "Done #1" in button.label
         # Discord.py wraps emojis in PartialEmoji, check name instead
         assert button.emoji is not None
 
     @pytest.mark.asyncio
     async def test_button_completed_task(self) -> None:
-        """Test button for completed task."""
+        """Test button for completed task shows 'Undo' without number."""
         task = create_task(id=3, done=True)
         storage = MagicMock()
 
-        button = TaskButton(task=task, storage=storage)
+        button = TaskButton(task=task, storage=storage, display_index=2)
 
-        assert "Undo #3" in button.label
+        # Completed tasks show "Undo" without a number since they don't
+        # have display numbers in the task list
+        assert button.label == "Undo"
         assert button.emoji is not None
 
     @pytest.mark.asyncio
@@ -63,8 +65,9 @@ class TestTaskButton:
         task = create_task(id=7)
         storage = MagicMock()
 
-        button = TaskButton(task=task, storage=storage)
+        button = TaskButton(task=task, storage=storage, display_index=1)
 
+        # custom_id still uses database ID for internal operations
         assert button.custom_id.startswith("task_7_")
 
     @pytest.mark.asyncio
@@ -72,7 +75,7 @@ class TestTaskButton:
         """Test that callback rejects clicks from wrong user."""
         task = create_task(id=1)
         storage = MagicMock()
-        button = TaskButton(task=task, storage=storage)
+        button = TaskButton(task=task, storage=storage, display_index=1)
 
         # Mock interaction from different user
         interaction = MagicMock()
@@ -230,7 +233,7 @@ class TestTaskButton:
         storage.mark_task_done = AsyncMock(return_value=True)
 
         # Create button without adding to view
-        button = TaskButton(task=task, storage=storage)
+        button = TaskButton(task=task, storage=storage, display_index=1)
 
         interaction = MagicMock()
         interaction.user = MagicMock()

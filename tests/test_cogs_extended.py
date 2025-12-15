@@ -43,18 +43,25 @@ def create_sample_task(id: int = 1):
 
 
 class TestGetUptime:
-    """Tests for TasksCog.get_uptime class method."""
+    """Tests for TasksCog.get_uptime instance method."""
 
     def test_get_uptime_returns_float(self):
         """Test get_uptime returns a float."""
-        uptime = TasksCog.get_uptime()
+        mock_bot = MagicMock()
+        mock_storage = MagicMock()
+        cog = TasksCog(mock_bot, mock_storage)
+        uptime = cog.get_uptime()
         assert isinstance(uptime, float)
 
     def test_reset_start_time(self):
         """Test reset_start_time resets the timer."""
-        TasksCog.reset_start_time()
-        uptime = TasksCog.get_uptime()
-        assert uptime == 0.0
+        mock_bot = MagicMock()
+        mock_storage = MagicMock()
+        cog = TasksCog(mock_bot, mock_storage)
+        cog.reset_start_time()
+        uptime = cog.get_uptime()
+        assert uptime >= 0.0  # May be slightly > 0 due to execution time
+        assert uptime < 1.0  # Should be very small
 
 
 class TestEditTaskCommand:
@@ -166,7 +173,7 @@ class TestEditTaskCommand:
     async def test_edit_task_description_too_long(
         self,
         cog,
-        _mock_storage,
+        mock_storage,  # noqa: ARG002
     ):
         """Test edit with too long description."""
         interaction = create_mock_interaction()
