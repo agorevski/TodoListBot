@@ -24,6 +24,7 @@ from ..utils.formatting import (
     format_tasks_cleared,
 )
 from ..views.task_view import TaskListView
+from ..views.registry import ViewRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -31,15 +32,22 @@ logger = logging.getLogger(__name__)
 class TasksCog(commands.Cog):
     """Cog containing task management slash commands."""
 
-    def __init__(self, bot: commands.Bot, storage: TaskStorage) -> None:
+    def __init__(
+        self,
+        bot: commands.Bot,
+        storage: TaskStorage,
+        registry: ViewRegistry | None = None,
+    ) -> None:
         """Initialize the tasks cog.
 
         Args:
             bot: The Discord bot instance
             storage: The task storage backend
+            registry: Optional view registry for auto-refresh support
         """
         self.bot = bot
         self.storage = storage
+        self.registry = registry or ViewRegistry()
         self._start_time: float = time.time()
 
     def get_uptime(self) -> float:
@@ -125,6 +133,14 @@ class TasksCog(commands.Cog):
         logger.info("Task #%s created for user %s", task.id, interaction.user.id)
         await interaction.response.send_message(format_task_added(task), ephemeral=True)
 
+        # Notify any active views to refresh
+        await self.registry.notify(
+            server_id=interaction.guild.id,
+            channel_id=interaction.channel_id,
+            user_id=interaction.user.id,
+            task_date=task.task_date,
+        )
+
     @app_commands.command(name="list", description="List your tasks")
     @app_commands.describe(
         date_str="Optional date in YYYY-MM-DD format (defaults to today)",
@@ -185,6 +201,7 @@ class TasksCog(commands.Cog):
             server_id=interaction.guild.id,
             channel_id=interaction.channel_id,
             task_date=task_date,
+            registry=self.registry,
         )
 
         await interaction.response.send_message(
@@ -248,6 +265,14 @@ class TasksCog(commands.Cog):
                 interaction.user.id,
             )
             await interaction.response.send_message(format_task_done(task))
+
+            # Notify any active views to refresh
+            await self.registry.notify(
+                server_id=interaction.guild.id,
+                channel_id=interaction.channel_id,
+                user_id=interaction.user.id,
+                task_date=task.task_date,
+            )
         else:
             await interaction.response.send_message(
                 format_task_not_found(task_id),
@@ -354,6 +379,14 @@ class TasksCog(commands.Cog):
                 format_task_updated(task_id, description, task_priority),
                 ephemeral=True,
             )
+
+            # Notify any active views to refresh
+            await self.registry.notify(
+                server_id=interaction.guild.id,
+                channel_id=interaction.channel_id,
+                user_id=interaction.user.id,
+                task_date=task.task_date,
+            )
         else:
             await interaction.response.send_message(
                 format_task_not_found(task_id),
@@ -411,6 +444,14 @@ class TasksCog(commands.Cog):
                 interaction.user.id,
             )
             await interaction.response.send_message(format_task_deleted(task), ephemeral=True)
+
+            # Notify any active views to refresh
+            await self.registry.notify(
+                server_id=interaction.guild.id,
+                channel_id=interaction.channel_id,
+                user_id=interaction.user.id,
+                task_date=task.task_date,
+            )
         else:
             await interaction.response.send_message(
                 format_task_not_found(task_id),
@@ -449,6 +490,15 @@ class TasksCog(commands.Cog):
             count,
         )
         await interaction.response.send_message(format_tasks_cleared(count))
+
+        # Notify any active views to refresh (for today's date)
+        if count > 0:
+            await self.registry.notify(
+                server_id=interaction.guild.id,
+                channel_id=interaction.channel_id,
+                user_id=interaction.user.id,
+                task_date=date.today(),
+            )
 
     @app_commands.command(name="status", description="Show bot status and stats")
     @app_commands.checks.cooldown(

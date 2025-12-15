@@ -21,6 +21,7 @@ from ..utils.formatting import (
 
 if TYPE_CHECKING:
     from ..storage.base import TaskStorage
+    from .registry import ViewRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -158,6 +159,7 @@ class TaskListView(discord.ui.View):
         channel_id: int,
         task_date: date | None = None,
         timeout: float = VIEW_TIMEOUT_SECONDS,
+        registry: "ViewRegistry | None" = None,
     ) -> None:
         """Initialize the task list view.
 
@@ -169,6 +171,7 @@ class TaskListView(discord.ui.View):
             channel_id: The Discord channel ID
             task_date: Optional date for the task list
             timeout: How long the view should accept interactions (seconds)
+            registry: Optional view registry for auto-refresh support
         """
         super().__init__(timeout=timeout)
         self.tasks = tasks
@@ -178,6 +181,7 @@ class TaskListView(discord.ui.View):
         self.channel_id = channel_id
         self.task_date = task_date or date.today()
         self._message: discord.Message | None = None
+        self._registry = registry
 
         logger.debug(
             "TaskListView created: %d tasks for user %d",
@@ -187,6 +191,10 @@ class TaskListView(discord.ui.View):
 
         # Add buttons for each task
         self._add_task_buttons()
+
+        # Register with the registry if provided
+        if self._registry is not None:
+            self._registry.register(self)
 
     def _add_task_buttons(self) -> None:
         """Add buttons for each task in the list.
@@ -297,12 +305,64 @@ class TaskListView(discord.ui.View):
             else:
                 logger.error("HTTP error while refreshing view: %s", e)
 
+    async def refresh_from_storage(self) -> None:
+        """Refresh the task list from storage and update the message.
+
+        This method is called by the registry when tasks are modified
+        by other commands (add, edit, delete, etc.).
+        """
+        if self._message is None:
+            logger.debug("No message reference, cannot refresh from storage")
+            return
+
+        logger.debug("Refreshing task list from storage for user %d", self.user_id)
+
+        # Fetch updated tasks from storage
+        self.tasks = await self.storage.get_tasks(
+            server_id=self.server_id,
+            channel_id=self.channel_id,
+            user_id=self.user_id,
+            task_date=self.task_date,
+        )
+
+        # Rebuild buttons
+        self._add_task_buttons()
+
+        # Update the message
+        try:
+            await self._message.edit(
+                content=self.get_content(),
+                view=self if self.tasks else None,
+            )
+            logger.debug(
+                "Refreshed view from storage for user %d, now has %d tasks",
+                self.user_id,
+                len(self.tasks),
+            )
+        except discord.errors.NotFound:
+            logger.debug("Message was deleted, cannot refresh from storage")
+            # Unregister from registry since message is gone
+            if self._registry is not None:
+                self._registry.unregister(self)
+        except discord.errors.HTTPException as e:
+            if e.status == 429:  # Rate limited
+                logger.warning(
+                    "Rate limited while refreshing from storage, retry after: %s",
+                    e.retry_after if hasattr(e, "retry_after") else "unknown",
+                )
+            else:
+                logger.error("HTTP error while refreshing from storage: %s", e)
+
     async def on_timeout(self) -> None:
         """Handle view timeout by disabling all buttons."""
         logger.debug(
             "View timeout for user %d, disabling buttons",
             self.user_id,
         )
+
+        # Unregister from registry
+        if self._registry is not None:
+            self._registry.unregister(self)
 
         for item in self.children:  # pragma: no branch
             if isinstance(item, discord.ui.Button):
@@ -336,6 +396,7 @@ def create_task_list_view(
     server_id: int,
     channel_id: int,
     task_date: date | None = None,
+    registry: "ViewRegistry | None" = None,
 ) -> TaskListView:
     """Create a new task list view.
 
@@ -348,6 +409,7 @@ def create_task_list_view(
         server_id: The Discord server ID
         channel_id: The Discord channel ID
         task_date: Optional date for the task list
+        registry: Optional view registry for auto-refresh support
 
     Returns:
         Configured TaskListView instance
@@ -359,4 +421,5 @@ def create_task_list_view(
         server_id=server_id,
         channel_id=channel_id,
         task_date=task_date,
+        registry=registry,
     )

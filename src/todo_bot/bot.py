@@ -9,6 +9,7 @@ from .cogs.tasks import TasksCog
 from .config import DEFAULT_DB_PATH, BotConfig
 from .storage.base import TaskStorage
 from .storage.sqlite import SQLiteTaskStorage
+from .views.registry import ViewRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,9 @@ class TodoBot(commands.Bot):
             self.storage = storage
             logger.info("Using custom storage backend")
 
+        # Create the view registry for auto-refresh support
+        self.registry = ViewRegistry()
+
     @property
     def config(self) -> BotConfig | None:
         """Get the bot configuration."""
@@ -65,9 +69,9 @@ class TodoBot(commands.Bot):
         await self.storage.initialize()
         logger.info("Storage initialized")
 
-        # Add the tasks cog
-        await self.add_cog(TasksCog(self, self.storage))
-        logger.info("Tasks cog loaded")
+        # Add the tasks cog with the registry
+        await self.add_cog(TasksCog(self, self.storage, self.registry))
+        logger.info("Tasks cog loaded with view registry")
 
         # Sync slash commands with Discord
         # Note: In production, consider guild-specific sync to avoid rate limits
