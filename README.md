@@ -27,6 +27,7 @@ A Discord bot for managing daily tasks using the A/B/C priority system. Built wi
 | `/list` | List your tasks for today | `/list` |
 | `/list [date]` | List tasks for a specific date | `/list 2024-12-25` |
 | `/done [id]` | Mark a task as completed | `/done 3` |
+| `/edit [id]` | Edit a task's description or priority | `/edit 3 description:"Updated task"` |
 | `/delete [id]` | Delete a task permanently | `/delete 3` |
 | `/clear` | Remove all completed tasks | `/clear` |
 | `/rollover` | Copy incomplete tasks from yesterday to today | `/rollover` |
@@ -286,46 +287,59 @@ ruff format src/ tests/
 ### Project Structure
 
 ```text
-TodoList/
+TodoListBot/
 ├── .github/
 │   └── workflows/
 │       └── tests.yml              # GitHub Actions CI/CD
 ├── src/
 │   └── todo_bot/
 │       ├── __init__.py            # Package exports
-│       ├── main.py                # Entry point
 │       ├── bot.py                 # Bot setup and lifecycle
 │       ├── config.py              # Centralized configuration
 │       ├── exceptions.py          # Custom exception hierarchy
+│       ├── health.py              # Health check utilities and CLI
+│       ├── main.py                # Entry point with signal handling
+│       ├── messages.py            # Centralized message strings (i18n)
 │       ├── py.typed               # PEP 561 type marker
+│       ├── scheduler.py           # Background scheduler for rollover
+│       ├── validators.py          # Input validation and sanitization
 │       ├── cogs/
 │       │   ├── __init__.py
 │       │   └── tasks.py           # Slash commands
 │       ├── models/
 │       │   ├── __init__.py
-│       │   └── task.py            # Task model
+│       │   └── task.py            # Task model and Priority enum
 │       ├── storage/
 │       │   ├── __init__.py
-│       │   ├── base.py            # Abstract interface
+│       │   ├── base.py            # Abstract storage interface
 │       │   └── sqlite.py          # SQLite implementation
 │       ├── utils/
 │       │   ├── __init__.py
 │       │   └── formatting.py      # Display helpers
 │       └── views/
 │           ├── __init__.py
-│           └── task_view.py       # Discord buttons
+│           ├── registry.py        # View registry for auto-refresh
+│           └── task_view.py       # Discord buttons and UI
 ├── tests/
+│   ├── __init__.py
 │   ├── conftest.py                # Test fixtures
 │   ├── test_bot.py
 │   ├── test_cogs.py
 │   ├── test_cogs_extended.py      # Extended cog tests
 │   ├── test_config.py             # Configuration tests
+│   ├── test_exceptions.py         # Exception tests
 │   ├── test_formatting.py
 │   ├── test_formatting_extended.py # Extended formatting tests
+│   ├── test_health.py             # Health check tests
 │   ├── test_main.py
+│   ├── test_messages.py           # Message strings tests
+│   ├── test_registry.py           # View registry tests
+│   ├── test_rollover.py           # Rollover storage tests
+│   ├── test_scheduler.py          # Scheduler tests
 │   ├── test_storage.py
 │   ├── test_storage_extended.py   # Extended storage tests
 │   ├── test_task_model.py
+│   ├── test_validators.py         # Validator tests
 │   └── test_views.py
 ├── .clinerules                    # Cline AI configuration
 ├── .dockerignore                  # Docker ignore patterns
@@ -385,6 +399,199 @@ TodoBotError          # Base exception
 │   ├── StorageInitializationError
 │   └── StorageOperationError
 └── ConfigurationError # Configuration issues
+```
+
+## Running as a Linux Daemon Service
+
+For production deployments on Linux, you can run the bot as a systemd service for automatic startup, restart on failure, and proper logging integration.
+
+### Creating a Systemd Service
+
+1. **Create a dedicated user** (recommended for security):
+
+   ```bash
+   sudo useradd -r -s /bin/false todobot
+   ```
+
+2. **Set up the installation directory**:
+
+   ```bash
+   # Create directory and copy files
+   sudo mkdir -p /opt/todobot
+   sudo cp -r . /opt/todobot/
+   
+   # Create data directory
+   sudo mkdir -p /opt/todobot/data
+   
+   # Set ownership
+   sudo chown -R todobot:todobot /opt/todobot
+   ```
+
+3. **Create a virtual environment and install**:
+
+   ```bash
+   sudo -u todobot python3 -m venv /opt/todobot/venv
+   sudo -u todobot /opt/todobot/venv/bin/pip install -e /opt/todobot
+   ```
+
+4. **Create the environment file**:
+
+   ```bash
+   sudo nano /opt/todobot/.env
+   ```
+
+   Add your configuration:
+
+   ```env
+   DISCORD_TOKEN=your_discord_bot_token_here
+   DATABASE_PATH=/opt/todobot/data/tasks.db
+   LOG_LEVEL=INFO
+   ENABLE_AUTO_ROLLOVER=true
+   ```
+
+   Secure the file:
+
+   ```bash
+   sudo chown todobot:todobot /opt/todobot/.env
+   sudo chmod 600 /opt/todobot/.env
+   ```
+
+5. **Create the systemd service file**:
+
+   ```bash
+   sudo nano /etc/systemd/system/todobot.service
+   ```
+
+   Add the following content:
+
+   ```ini
+   [Unit]
+   Description=Discord A/B/C Todo Bot
+   Documentation=https://github.com/yourusername/TodoListBot
+   After=network-online.target
+   Wants=network-online.target
+
+   [Service]
+   Type=simple
+   User=todobot
+   Group=todobot
+   WorkingDirectory=/opt/todobot
+   EnvironmentFile=/opt/todobot/.env
+   ExecStart=/opt/todobot/venv/bin/todo-bot
+   Restart=always
+   RestartSec=10
+
+   # Security hardening
+   NoNewPrivileges=yes
+   PrivateTmp=yes
+   ProtectSystem=strict
+   ProtectHome=yes
+   ReadWritePaths=/opt/todobot/data
+
+   # Resource limits
+   MemoryMax=256M
+   CPUQuota=50%
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+
+6. **Enable and start the service**:
+
+   ```bash
+   # Reload systemd to recognize the new service
+   sudo systemctl daemon-reload
+
+   # Enable the service to start on boot
+   sudo systemctl enable todobot
+
+   # Start the service
+   sudo systemctl start todobot
+   ```
+
+### Managing the Service
+
+```bash
+# Check service status
+sudo systemctl status todobot
+
+# View logs (live)
+sudo journalctl -u todobot -f
+
+# View recent logs
+sudo journalctl -u todobot -n 100
+
+# Restart the service
+sudo systemctl restart todobot
+
+# Stop the service
+sudo systemctl stop todobot
+
+# Disable auto-start on boot
+sudo systemctl disable todobot
+```
+
+### Updating the Bot
+
+```bash
+# Stop the service
+sudo systemctl stop todobot
+
+# Update the code
+cd /opt/todobot
+sudo -u todobot git pull
+
+# Reinstall if dependencies changed
+sudo -u todobot /opt/todobot/venv/bin/pip install -e .
+
+# Restart the service
+sudo systemctl start todobot
+```
+
+## Health Checks
+
+The bot includes a health check CLI that can be used for monitoring and container health checks.
+
+### Using the Health Check CLI
+
+```bash
+# Run health check (from installed package)
+python -m todo_bot.health
+
+# With custom database path
+python -m todo_bot.health --db-path /path/to/tasks.db
+
+# Skip database checks (only check imports)
+python -m todo_bot.health --skip-db
+```
+
+### Exit Codes
+
+- `0` - Healthy: All checks passed
+- `1` - Unhealthy: One or more checks failed
+
+### Health Check Output
+
+```text
+OK: Imports successful
+OK: Database accessible at data/tasks.db
+OK: Storage connection verified
+HEALTHY: All checks passed
+```
+
+### Integration with Monitoring
+
+The health check can be integrated with monitoring tools:
+
+```bash
+# Example: Simple monitoring script
+#!/bin/bash
+if python -m todo_bot.health; then
+    echo "Bot is healthy"
+else
+    echo "Bot health check failed!"
+    # Send alert, restart service, etc.
+fi
 ```
 
 ## Contributing
