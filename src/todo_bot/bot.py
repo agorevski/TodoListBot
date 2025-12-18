@@ -7,6 +7,7 @@ from discord.ext import commands
 
 from .cogs.tasks import TasksCog
 from .config import DEFAULT_DB_PATH, BotConfig
+from .scheduler import RolloverScheduler, setup_scheduler
 from .storage.base import TaskStorage
 from .storage.sqlite import SQLiteTaskStorage
 from .views.registry import ViewRegistry
@@ -56,6 +57,9 @@ class TodoBot(commands.Bot):
         # Create the view registry for auto-refresh support
         self.registry = ViewRegistry()
 
+        # Scheduler will be initialized in setup_hook if enabled
+        self._scheduler: RolloverScheduler | None = None
+
     @property
     def config(self) -> BotConfig | None:
         """Get the bot configuration."""
@@ -84,6 +88,17 @@ class TodoBot(commands.Bot):
             logger.info("Slash commands synced globally")
         else:
             logger.info("Skipping global command sync (sync_commands_globally=false)")
+
+        # Set up the rollover scheduler if enabled
+        enable_rollover = True
+        if self._config:
+            enable_rollover = self._config.enable_auto_rollover
+
+        if enable_rollover:
+            self._scheduler = await setup_scheduler(self, self.storage)
+            logger.info("Rollover scheduler enabled")
+        else:
+            logger.info("Rollover scheduler disabled (enable_auto_rollover=false)")
 
     async def on_ready(self) -> None:
         """Handle the bot becoming ready."""

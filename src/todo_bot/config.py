@@ -27,6 +27,10 @@ CONNECTION_RETRY_DELAY_SECONDS: Final[float] = 1.0
 # Data retention settings (in days, 0 = disabled)
 DEFAULT_RETENTION_DAYS: Final[int] = 0  # Disabled by default
 
+# Auto-rollover settings
+DEFAULT_ENABLE_AUTO_ROLLOVER: Final[bool] = True
+ROLLOVER_HOUR_UTC: Final[int] = 0  # Midnight UTC
+
 
 @dataclass(frozen=True)
 class BotConfig:
@@ -41,6 +45,7 @@ class BotConfig:
     log_level: str = "INFO"
     sync_commands_globally: bool = True
     retention_days: int = DEFAULT_RETENTION_DAYS
+    enable_auto_rollover: bool = DEFAULT_ENABLE_AUTO_ROLLOVER
 
     @classmethod
     def from_env(cls) -> "BotConfig":
@@ -62,6 +67,7 @@ class BotConfig:
             )
 
         sync_env = os.getenv("SYNC_COMMANDS_GLOBALLY", "true")
+        rollover_env = os.getenv("ENABLE_AUTO_ROLLOVER", "true")
 
         return cls(
             discord_token=token,
@@ -71,4 +77,5 @@ class BotConfig:
             retention_days=int(
                 os.getenv("RETENTION_DAYS", str(DEFAULT_RETENTION_DAYS))
             ),
+            enable_auto_rollover=rollover_env.lower() == "true",
         )

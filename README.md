@@ -14,6 +14,7 @@ A Discord bot for managing daily tasks using the A/B/C priority system. Built wi
 - 📅 **Date Support**: View tasks for today or any specific date
 - 👤 **Per-User Tasks**: Each user has their own private task list
 - 📊 **Strikethrough Completed Tasks**: Visual feedback for done items
+- 🔄 **Automatic Rollover**: Incomplete tasks automatically carry over to the next day at midnight
 - 💾 **SQLite Storage**: Persistent task storage with easy backup
 - 🐳 **Docker Support**: Easy deployment with Docker and Docker Compose
 - ⚙️ **Configurable**: Environment-based configuration with sensible defaults
@@ -28,6 +29,8 @@ A Discord bot for managing daily tasks using the A/B/C priority system. Built wi
 | `/done [id]` | Mark a task as completed | `/done 3` |
 | `/delete [id]` | Delete a task permanently | `/delete 3` |
 | `/clear` | Remove all completed tasks | `/clear` |
+| `/rollover` | Copy incomplete tasks from yesterday to today | `/rollover` |
+| `/status` | Show bot status and stats | `/status` |
 
 > **Rate Limit:** 5 commands per 10 seconds per user
 
@@ -152,7 +155,34 @@ SYNC_COMMANDS_GLOBALLY=true
 # Number of days to keep old tasks (0 = keep forever)
 # Default: 0 (disabled)
 RETENTION_DAYS=0
+
+# Auto Rollover (optional)
+# Enable automatic midnight rollover of incomplete tasks
+# Default: true
+ENABLE_AUTO_ROLLOVER=true
 ```
+
+## Automatic Task Rollover
+
+The bot automatically rolls over incomplete tasks at midnight UTC. This ensures that tasks you didn't complete yesterday are automatically added to today's list while remaining on the previous day's list for reference.
+
+### How it works
+
+1. **At midnight UTC**, the bot checks for incomplete tasks from the previous day
+2. **Incomplete tasks are copied** to the new day's list with their original priority
+3. **Original tasks remain** on the previous day for historical tracking
+4. **Duplicates are prevented** - if a task with the same description already exists on the new day, it won't be copied again
+
+### Manual Rollover
+
+You can also manually trigger a rollover using the `/rollover` command. This is useful if:
+- You want to immediately copy yesterday's incomplete tasks
+- The automatic rollover didn't run (e.g., bot was offline at midnight)
+- You prefer to control when tasks roll over
+
+### Disabling Auto-Rollover
+
+Set `ENABLE_AUTO_ROLLOVER=false` in your environment to disable automatic midnight rollover. You can still use the `/rollover` command manually.
 
 ## Docker Deployment
 

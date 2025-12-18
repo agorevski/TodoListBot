@@ -574,3 +574,132 @@ class SQLiteTaskStorage(TaskStorage):
             "schema_version": schema_version,
             "database_path": self.db_path,
         }
+
+    @with_retry()
+    async def rollover_incomplete_tasks(
+        self,
+        from_date: date,
+        to_date: date,
+    ) -> int:
+        """Copy incomplete tasks from one date to the next day.
+
+        This method finds all incomplete (not done) tasks for the from_date
+        and creates copies of them for the to_date. The original tasks
+        remain unchanged on their original date.
+
+        Tasks are only rolled over if an identical task (same description,
+        priority, server, channel, user) does not already exist on the to_date.
+
+        Args:
+            from_date: The source date to copy incomplete tasks from
+            to_date: The target date to copy tasks to
+
+        Returns:
+            The number of tasks that were rolled over
+        """
+        conn = self._ensure_connected()
+
+        # Get all incomplete tasks from the source date
+        cursor = await conn.execute(
+            """
+            SELECT description, priority, server_id, channel_id, user_id
+            FROM tasks
+            WHERE task_date = ? AND done = 0
+            """,
+            (from_date.isoformat(),),
+        )
+        incomplete_tasks = await cursor.fetchall()
+
+        if not incomplete_tasks:
+            return 0
+
+        rolled_over_count = 0
+
+        for task_row in incomplete_tasks:
+            description = task_row["description"]
+            priority = task_row["priority"]
+            server_id = task_row["server_id"]
+            channel_id = task_row["channel_id"]
+            user_id = task_row["user_id"]
+
+            # Check if an identical task already exists on the target date
+            cursor = await conn.execute(
+                """
+                SELECT id FROM tasks
+                WHERE task_date = ? AND description = ? AND priority = ?
+                    AND server_id = ? AND channel_id = ? AND user_id = ?
+                """,
+                (
+                    to_date.isoformat(),
+                    description,
+                    priority,
+                    server_id,
+                    channel_id,
+                    user_id,
+                ),
+            )
+            existing = await cursor.fetchone()
+
+            if existing:
+                # Skip this task - already exists on target date
+                continue
+
+            # Create a copy of the task for the new date
+            await conn.execute(
+                """
+                INSERT INTO tasks
+                    (description, priority, task_date, server_id, channel_id, user_id, done)
+                VALUES (?, ?, ?, ?, ?, ?, 0)
+                """,
+                (
+                    description,
+                    priority,
+                    to_date.isoformat(),
+                    server_id,
+                    channel_id,
+                    user_id,
+                ),
+            )
+            rolled_over_count += 1
+
+        await conn.commit()
+
+        if rolled_over_count > 0:
+            logger.info(
+                "Rolled over %d incomplete tasks from %s to %s",
+                rolled_over_count,
+                from_date,
+                to_date,
+            )
+
+        return rolled_over_count
+
+    @with_retry()
+    async def get_all_user_contexts(
+        self,
+        task_date: date,
+    ) -> list[tuple[int, int, int]]:
+        """Get all unique (server_id, channel_id, user_id) combinations for a date.
+
+        This is used by the scheduler to determine which users have tasks
+        that may need to be rolled over.
+
+        Args:
+            task_date: The date to get user contexts for
+
+        Returns:
+            List of (server_id, channel_id, user_id) tuples
+        """
+        conn = self._ensure_connected()
+
+        cursor = await conn.execute(
+            """
+            SELECT DISTINCT server_id, channel_id, user_id
+            FROM tasks
+            WHERE task_date = ?
+            """,
+            (task_date.isoformat(),),
+        )
+        rows = await cursor.fetchall()
+
+        return [(row["server_id"], row["channel_id"], row["user_id"]) for row in rows]

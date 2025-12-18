@@ -55,7 +55,8 @@ class TestTodoBot:
             await bot.setup_hook()
 
             mock_storage.initialize.assert_called_once()
-            mock_add_cog.assert_called_once()
+            # add_cog is called twice: once for TasksCog, once for RolloverScheduler
+            assert mock_add_cog.call_count == 2
             mock_sync.assert_called_once()
 
     @pytest.mark.asyncio
@@ -77,7 +78,11 @@ class TestTodoBot:
             await bot.setup_hook()
 
             mock_storage.initialize.assert_called_once()
-            mock_add_cog.assert_called_once()
+            # add_cog is called once (TasksCog only) since scheduler is disabled when
+            # enable_auto_rollover defaults to True but we need to check with False
+            # Actually, let's verify the expected behavior - scheduler IS added
+            # Since config doesn't disable rollover, scheduler is still added
+            assert mock_add_cog.call_count == 2
             mock_sync.assert_not_called()
 
     @pytest.mark.asyncio

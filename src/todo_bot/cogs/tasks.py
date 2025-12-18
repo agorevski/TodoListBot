@@ -2,7 +2,7 @@
 
 import logging
 import time
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 import discord
 from discord import app_commands
@@ -23,8 +23,8 @@ from ..utils.formatting import (
     format_task_updated,
     format_tasks_cleared,
 )
-from ..views.task_view import TaskListView
 from ..views.registry import ViewRegistry
+from ..views.task_view import TaskListView
 
 logger = logging.getLogger(__name__)
 
@@ -576,6 +576,89 @@ class TasksCog(commands.Cog):
             )
 
         await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(
+        name="rollover",
+        description="Copy incomplete tasks from yesterday to today",
+    )
+    @app_commands.checks.cooldown(
+        RATE_LIMIT_COMMANDS, RATE_LIMIT_SECONDS, key=lambda i: i.user.id
+    )
+    async def rollover_tasks(
+        self,
+        interaction: discord.Interaction,
+    ) -> None:
+        """Manually roll over incomplete tasks from yesterday to today.
+
+        This copies any tasks that were not completed yesterday to today's list.
+        The original tasks remain on yesterday's list.
+
+        Args:
+            interaction: The Discord interaction
+        """
+        if not interaction.guild:
+            await interaction.response.send_message(
+                "❌ This command can only be used in a server.",
+                ephemeral=True,
+            )
+            return
+
+        yesterday = date.today() - timedelta(days=1)
+        today = date.today()
+
+        logger.info(
+            "User %s manually triggering rollover from %s to %s",
+            interaction.user.id,
+            yesterday,
+            today,
+        )
+
+        # Get incomplete tasks from yesterday for this user/channel
+        incomplete_tasks = await self.storage.get_tasks(
+            server_id=interaction.guild.id,
+            channel_id=interaction.channel_id,
+            user_id=interaction.user.id,
+            task_date=yesterday,
+            include_done=False,
+        )
+
+        if not incomplete_tasks:
+            await interaction.response.send_message(
+                "✅ No incomplete tasks from yesterday to roll over.",
+                ephemeral=True,
+            )
+            return
+
+        # Perform the rollover
+        rolled_count = await self.storage.rollover_incomplete_tasks(
+            from_date=yesterday,
+            to_date=today,
+        )
+
+        if rolled_count > 0:
+            logger.info(
+                "User %s rolled over %d tasks from %s to %s",
+                interaction.user.id,
+                rolled_count,
+                yesterday,
+                today,
+            )
+            await interaction.response.send_message(
+                f"🔄 Rolled over **{rolled_count}** incomplete task(s) from yesterday to today.",
+            )
+
+            # Notify any active views to refresh
+            await self.registry.notify(
+                server_id=interaction.guild.id,
+                channel_id=interaction.channel_id,
+                user_id=interaction.user.id,
+                task_date=today,
+            )
+        else:
+            await interaction.response.send_message(
+                "✅ All tasks from yesterday were already rolled over or completed.",
+                ephemeral=True,
+            )
 
     async def cog_app_command_error(
         self,

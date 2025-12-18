@@ -50,9 +50,12 @@ Supports Python 3.11 and 3.12. Version 1.0.0.
 - `src/todo_bot/` - Main source code
   - `config.py` - Centralized configuration and constants
   - `exceptions.py` - Custom exception hierarchy
+  - `scheduler.py` - Background scheduler for midnight task rollover
   - `py.typed` - PEP 561 type marker
 - `tests/` - Unit and integration tests
   - Extended test files: `test_*_extended.py`
+  - `test_scheduler.py` - Scheduler tests
+  - `test_rollover.py` - Rollover storage tests
 - `.github/workflows/` - CI/CD configuration
 - `Dockerfile` - Multi-stage Docker build
 - `docker-compose.yml` - Docker Compose configuration
@@ -65,6 +68,16 @@ Supports Python 3.11 and 3.12. Version 1.0.0.
 - `LOG_LEVEL` - Logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL (default: INFO)
 - `SYNC_COMMANDS_GLOBALLY` - Sync slash commands globally (default: true)
 - `RETENTION_DAYS` - Days to keep old tasks, 0 = forever (default: 0)
+- `ENABLE_AUTO_ROLLOVER` - Enable automatic midnight task rollover (default: true)
+
+## Features
+
+### Automatic Task Rollover
+- At midnight UTC, incomplete tasks from the previous day are automatically copied to the new day
+- Original tasks remain on the old list for reference
+- Duplicate prevention: tasks with identical descriptions are not copied again
+- Can be disabled via `ENABLE_AUTO_ROLLOVER=false`
+- Manual rollover available via `/rollover` command
 
 ## Dependencies
 

@@ -260,3 +260,45 @@ class TaskStorage(ABC):
             Dictionary with storage statistics
         """
         ...  # pragma: no cover
+
+    @abstractmethod
+    async def rollover_incomplete_tasks(
+        self,
+        from_date: date,
+        to_date: date,
+    ) -> int:
+        """Copy incomplete tasks from one date to the next day.
+
+        This method finds all incomplete (not done) tasks for the from_date
+        and creates copies of them for the to_date. The original tasks
+        remain unchanged on their original date.
+
+        Tasks are only rolled over if an identical task (same description,
+        priority, server, channel, user) does not already exist on the to_date.
+
+        Args:
+            from_date: The source date to copy incomplete tasks from
+            to_date: The target date to copy tasks to
+
+        Returns:
+            The number of tasks that were rolled over
+        """
+        ...  # pragma: no cover
+
+    @abstractmethod
+    async def get_all_user_contexts(
+        self,
+        task_date: date,
+    ) -> list[tuple[int, int, int]]:
+        """Get all unique (server_id, channel_id, user_id) combinations for a date.
+
+        This is used by the scheduler to determine which users have tasks
+        that may need to be rolled over.
+
+        Args:
+            task_date: The date to get user contexts for
+
+        Returns:
+            List of (server_id, channel_id, user_id) tuples
+        """
+        ...  # pragma: no cover
