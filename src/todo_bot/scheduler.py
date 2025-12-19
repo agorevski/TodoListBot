@@ -1,5 +1,6 @@
 """Background scheduler for automatic midnight task rollover."""
 
+import asyncio
 import logging
 from datetime import date, datetime, timedelta, timezone
 
@@ -113,8 +114,6 @@ class RolloverScheduler(commands.Cog):
 
         # For the first run, we wait until midnight
         # Subsequent runs are handled by the 24-hour loop
-        import asyncio
-
         await asyncio.sleep(seconds_to_wait)
 
     async def perform_manual_rollover(

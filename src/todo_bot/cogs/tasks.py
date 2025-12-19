@@ -13,6 +13,8 @@ from ..config import (
     RATE_LIMIT_COMMANDS,
     RATE_LIMIT_SECONDS,
 )
+from ..exceptions import StorageError
+from ..messages import ErrorMessages
 from ..models.task import Priority
 from ..storage.base import TaskStorage
 from ..utils.formatting import (
@@ -92,7 +94,7 @@ class TasksCog(commands.Cog):
         """
         if not interaction.guild:
             await interaction.response.send_message(
-                "❌ This command can only be used in a server.",
+                ErrorMessages.GUILD_ONLY,
                 ephemeral=True,
             )
             return
@@ -100,8 +102,7 @@ class TasksCog(commands.Cog):
         # Validate description length
         if len(description) > MAX_DESCRIPTION_LENGTH:
             await interaction.response.send_message(
-                f"❌ Description too long ({len(description)} chars). "
-                f"Maximum is {MAX_DESCRIPTION_LENGTH} characters.",
+                ErrorMessages.description_too_long(len(description), MAX_DESCRIPTION_LENGTH),
                 ephemeral=True,
             )
             return
@@ -161,7 +162,7 @@ class TasksCog(commands.Cog):
         """
         if not interaction.guild:
             await interaction.response.send_message(
-                "❌ This command can only be used in a server.",
+                ErrorMessages.GUILD_ONLY,
                 ephemeral=True,
             )
             return
@@ -173,8 +174,7 @@ class TasksCog(commands.Cog):
                 task_date = datetime.strptime(date_str, "%Y-%m-%d").date()
             except ValueError:
                 await interaction.response.send_message(
-                    "❌ Invalid date format. "
-                    "Please use YYYY-MM-DD (e.g., 2024-12-25).",
+                    ErrorMessages.INVALID_DATE_FORMAT,
                     ephemeral=True,
                 )
                 return
@@ -231,7 +231,7 @@ class TasksCog(commands.Cog):
         """
         if not interaction.guild:
             await interaction.response.send_message(
-                "❌ This command can only be used in a server.",
+                ErrorMessages.GUILD_ONLY,
                 ephemeral=True,
             )
             return
@@ -312,14 +312,14 @@ class TasksCog(commands.Cog):
         """
         if not interaction.guild:
             await interaction.response.send_message(
-                "❌ This command can only be used in a server.",
+                ErrorMessages.GUILD_ONLY,
                 ephemeral=True,
             )
             return
 
         if description is None and priority is None:
             await interaction.response.send_message(
-                "❌ Please provide a new description and/or priority.",
+                ErrorMessages.NO_CHANGES_PROVIDED,
                 ephemeral=True,
             )
             return
@@ -327,8 +327,7 @@ class TasksCog(commands.Cog):
         # Validate description length if provided
         if description and len(description) > MAX_DESCRIPTION_LENGTH:
             await interaction.response.send_message(
-                f"❌ Description too long ({len(description)} chars). "
-                f"Maximum is {MAX_DESCRIPTION_LENGTH} characters.",
+                ErrorMessages.description_too_long(len(description), MAX_DESCRIPTION_LENGTH),
                 ephemeral=True,
             )
             return
@@ -411,7 +410,7 @@ class TasksCog(commands.Cog):
         """
         if not interaction.guild:
             await interaction.response.send_message(
-                "❌ This command can only be used in a server.",
+                ErrorMessages.GUILD_ONLY,
                 ephemeral=True,
             )
             return
@@ -473,7 +472,7 @@ class TasksCog(commands.Cog):
         """
         if not interaction.guild:
             await interaction.response.send_message(
-                "❌ This command can only be used in a server.",
+                ErrorMessages.GUILD_ONLY,
                 ephemeral=True,
             )
             return
@@ -516,7 +515,7 @@ class TasksCog(commands.Cog):
         # Get database stats
         try:
             stats = await self.storage.get_stats()
-        except Exception as e:
+        except StorageError as e:
             logger.error("Failed to get storage stats: %s", e)
             stats = {"error": str(e)}
 
@@ -598,7 +597,7 @@ class TasksCog(commands.Cog):
         """
         if not interaction.guild:
             await interaction.response.send_message(
-                "❌ This command can only be used in a server.",
+                ErrorMessages.GUILD_ONLY,
                 ephemeral=True,
             )
             return
@@ -673,7 +672,7 @@ class TasksCog(commands.Cog):
         """
         if isinstance(error, app_commands.CommandOnCooldown):
             await interaction.response.send_message(
-                f"⏳ Slow down! Try again in {error.retry_after:.1f} seconds.",
+                ErrorMessages.rate_limited(error.retry_after),
                 ephemeral=True,
             )
         else:
@@ -683,7 +682,7 @@ class TasksCog(commands.Cog):
                 error,
             )
             await interaction.response.send_message(
-                "❌ An error occurred while processing your command.",
+                ErrorMessages.GENERIC_ERROR,
                 ephemeral=True,
             )
 

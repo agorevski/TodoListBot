@@ -5,13 +5,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from tests.conftest import TEST_CHANNEL_ID, TEST_SERVER_ID, TEST_USER_ID
 from todo_bot.cogs.tasks import TasksCog
 from todo_bot.models.task import MAX_DESCRIPTION_LENGTH, Priority, Task
-
-# Test constants
-TEST_SERVER_ID = 123456789
-TEST_CHANNEL_ID = 987654321
-TEST_USER_ID = 111222333
 
 
 def create_task(

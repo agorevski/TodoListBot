@@ -10,8 +10,46 @@ from .bot import run_bot
 
 logger = logging.getLogger(__name__)
 
-# Global reference for cleanup registration
-_cleanup_registered = False
+
+class CleanupManager:
+    """Manages cleanup registration without global mutable state."""
+
+    _instance: "CleanupManager | None" = None
+    _registered: bool = False
+
+    @classmethod
+    def get_instance(cls) -> "CleanupManager":
+        """Get the singleton instance."""
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
+    @classmethod
+    def reset(cls) -> None:
+        """Reset the singleton (for testing)."""
+        cls._instance = None
+        cls._registered = False
+
+    def register(self) -> None:
+        """Register atexit handler for final cleanup logging.
+
+        This ensures that even if an unexpected exit occurs,
+        we log that the bot is shutting down.
+        """
+        if not CleanupManager._registered:
+            atexit.register(self._cleanup_on_exit)
+            CleanupManager._registered = True
+            logger.debug("Cleanup handler registered")
+
+    @staticmethod
+    def _cleanup_on_exit() -> None:
+        """Cleanup function called on normal exit.
+
+        Note: The actual database cleanup is handled by TodoBot.close()
+        which is called by discord.py's event loop shutdown.
+        This function is a safety net for logging purposes.
+        """
+        logger.info("Bot process exiting. Cleanup completed.")
 
 
 class ShutdownHandler:
@@ -77,21 +115,7 @@ def register_cleanup() -> None:
     This ensures that even if an unexpected exit occurs,
     we log that the bot is shutting down.
     """
-    global _cleanup_registered
-    if not _cleanup_registered:
-        atexit.register(_cleanup_on_exit)
-        _cleanup_registered = True
-        logger.debug("Cleanup handler registered")
-
-
-def _cleanup_on_exit() -> None:
-    """Cleanup function called on normal exit.
-
-    Note: The actual database cleanup is handled by TodoBot.close()
-    which is called by discord.py's event loop shutdown.
-    This function is a safety net for logging purposes.
-    """
-    logger.info("Bot process exiting. Cleanup completed.")
+    CleanupManager.get_instance().register()
 
 
 def main() -> None:

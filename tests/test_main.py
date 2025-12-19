@@ -6,8 +6,8 @@ from unittest.mock import patch
 import pytest
 
 from todo_bot.main import (
+    CleanupManager,
     ShutdownHandler,
-    _cleanup_on_exit,
     main,
     register_cleanup,
     setup_signal_handlers,
@@ -62,50 +62,65 @@ class TestSetupSignalHandlers:
             assert returned_handler is custom_handler
 
 
+class TestCleanupManager:
+    """Tests for CleanupManager class."""
+
+    def test_cleanup_manager_singleton(self) -> None:
+        """Test CleanupManager returns the same instance."""
+        CleanupManager.reset()
+        instance1 = CleanupManager.get_instance()
+        instance2 = CleanupManager.get_instance()
+        assert instance1 is instance2
+        CleanupManager.reset()
+
+    def test_cleanup_manager_reset(self) -> None:
+        """Test CleanupManager.reset() creates new instance."""
+        instance1 = CleanupManager.get_instance()
+        CleanupManager.reset()
+        instance2 = CleanupManager.get_instance()
+        assert instance1 is not instance2
+        CleanupManager.reset()
+
+
 class TestRegisterCleanup:
     """Tests for register_cleanup function."""
 
     def test_register_cleanup_registers_atexit(self) -> None:
         """Test register_cleanup registers atexit handler."""
-        import todo_bot.main as main_module
-
-        # Reset the global flag
-        original_value = main_module._cleanup_registered
-        main_module._cleanup_registered = False
+        # Reset the singleton
+        CleanupManager.reset()
 
         with patch("atexit.register") as mock_register:
             register_cleanup()
 
-            mock_register.assert_called_once_with(_cleanup_on_exit)
+            mock_register.assert_called_once()
 
-        # Restore original value
-        main_module._cleanup_registered = original_value
+        # Restore
+        CleanupManager.reset()
 
     def test_register_cleanup_only_once(self) -> None:
         """Test register_cleanup only registers once."""
-        import todo_bot.main as main_module
-
-        # Set the global flag to True (already registered)
-        original_value = main_module._cleanup_registered
-        main_module._cleanup_registered = True
+        # Reset and register once
+        CleanupManager.reset()
 
         with patch("atexit.register") as mock_register:
-            register_cleanup()
+            register_cleanup()  # First call
+            register_cleanup()  # Second call
 
-            # Should not call register since already registered
-            mock_register.assert_not_called()
+            # Should only call register once
+            mock_register.assert_called_once()
 
-        # Restore original value
-        main_module._cleanup_registered = original_value
+        # Restore
+        CleanupManager.reset()
 
 
 class TestCleanupOnExit:
-    """Tests for _cleanup_on_exit function."""
+    """Tests for CleanupManager._cleanup_on_exit function."""
 
     def test_cleanup_on_exit_logs_message(self) -> None:
         """Test _cleanup_on_exit logs shutdown message."""
         with patch("todo_bot.main.logger") as mock_logger:
-            _cleanup_on_exit()
+            CleanupManager._cleanup_on_exit()
 
             mock_logger.info.assert_called_once()
             call_args = mock_logger.info.call_args[0][0]
@@ -117,6 +132,7 @@ class TestMain:
 
     def test_main_calls_run_bot(self) -> None:
         """Test main function calls run_bot."""
+        CleanupManager.reset()
         with (
             patch("todo_bot.main.setup_signal_handlers"),
             patch("todo_bot.main.register_cleanup"),
@@ -125,3 +141,4 @@ class TestMain:
             main()
 
             mock_run_bot.assert_called_once()
+        CleanupManager.reset()

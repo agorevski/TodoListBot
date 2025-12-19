@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from todo_bot.cogs.tasks import TasksCog
+from todo_bot.exceptions import StorageError
 from todo_bot.models.task import Priority, Task
 
 # Test constants
@@ -263,7 +264,7 @@ class TestStatusCommand:
     async def test_status_handles_stats_error(self, cog, mock_storage):
         """Test status handles storage error gracefully."""
         interaction = create_mock_interaction()
-        mock_storage.get_stats.side_effect = Exception("DB error")
+        mock_storage.get_stats.side_effect = StorageError("DB error")
 
         await cog.status.callback(cog, interaction)
 

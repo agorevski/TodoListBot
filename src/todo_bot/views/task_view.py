@@ -11,7 +11,7 @@ from ..config import (
     MAX_BUTTONS_PER_VIEW,
     VIEW_TIMEOUT_SECONDS,
 )
-from ..models.task import Task
+from ..models.task import Priority, Task
 from ..utils.formatting import (
     format_task_done,
     format_task_not_found,
@@ -207,8 +207,6 @@ class TaskListView(discord.ui.View):
         self.clear_items()
 
         # Group and sort tasks the same way as format_tasks does
-        from ..models.task import Priority
-
         grouped: dict[Priority, list[Task]] = {}
         for task in self.tasks:
             if task.priority not in grouped:

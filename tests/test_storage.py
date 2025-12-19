@@ -4,14 +4,10 @@ from datetime import date, timedelta
 
 import pytest
 
+from tests.conftest import TEST_CHANNEL_ID, TEST_SERVER_ID, TEST_USER_ID
 from todo_bot.exceptions import StorageConnectionError
 from todo_bot.models.task import Priority
 from todo_bot.storage.sqlite import SQLiteTaskStorage
-
-# Use fixtures from conftest
-TEST_SERVER_ID = 123456789
-TEST_CHANNEL_ID = 987654321
-TEST_USER_ID = 111222333
 
 
 class TestSQLiteTaskStorage:

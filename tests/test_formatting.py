@@ -2,6 +2,7 @@
 
 from datetime import date
 
+from tests.conftest import TEST_CHANNEL_ID, TEST_SERVER_ID, TEST_USER_ID
 from todo_bot.models.task import Priority, Task
 from todo_bot.utils.formatting import (
     _format_empty_message,
@@ -16,11 +17,6 @@ from todo_bot.utils.formatting import (
     format_tasks,
     format_tasks_cleared,
 )
-
-# Test constants
-TEST_SERVER_ID = 123456789
-TEST_CHANNEL_ID = 987654321
-TEST_USER_ID = 111222333
 
 
 def create_task(

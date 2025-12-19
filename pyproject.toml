@@ -83,9 +83,9 @@ select = [
     "SIM",    # flake8-simplify
 ]
 ignore = [
-    "E501",   # line too long (handled by formatter)
+    "E501",   # line too long (handled by ruff formatter)
     "B008",   # do not perform function calls in argument defaults
-    "B904",   # raise without from inside except
+              # (needed for discord.py decorators like @app_commands.describe)
 ]
 
 [tool.ruff.lint.isort]
