@@ -9,46 +9,70 @@ import pytest
 from todo_bot.scheduler import (
     RolloverScheduler,
     get_yesterday_and_today,
-    seconds_until_next_midnight_utc,
+    seconds_until_next_rollover_hour,
     setup_scheduler,
 )
 
 
-class TestSecondsUntilNextMidnightUtc:
-    """Tests for seconds_until_next_midnight_utc function."""
+class TestSecondsUntilNextRolloverHour:
+    """Tests for seconds_until_next_rollover_hour function."""
 
     def test_returns_positive_value(self) -> None:
         """Should return a positive number of seconds."""
-        seconds = seconds_until_next_midnight_utc()
+        seconds = seconds_until_next_rollover_hour()
         assert seconds > 0
 
     def test_returns_less_than_24_hours(self) -> None:
         """Should return less than 24 hours worth of seconds."""
-        seconds = seconds_until_next_midnight_utc()
+        seconds = seconds_until_next_rollover_hour()
         assert seconds < 24 * 60 * 60
 
     def test_at_midnight_returns_about_24_hours(self) -> None:
-        """At exactly midnight, should return about 24 hours."""
+        """At exactly midnight, should return about 24 hours for midnight rollover."""
         # Mock datetime.now to return exactly midnight
         mock_now = datetime(2024, 12, 15, 0, 0, 0, tzinfo=timezone.utc)
         with patch("todo_bot.scheduler.datetime") as mock_datetime:
             mock_datetime.now.return_value = mock_now
             mock_datetime.side_effect = lambda *args, **kwargs: datetime(*args, **kwargs)
             
-            seconds = seconds_until_next_midnight_utc()
+            seconds = seconds_until_next_rollover_hour(rollover_hour=0)
             # Should be approximately 24 hours (minus a few microseconds)
             assert 23 * 3600 < seconds <= 24 * 3600
 
     def test_at_noon_returns_about_12_hours(self) -> None:
-        """At noon UTC, should return about 12 hours."""
+        """At noon UTC, should return about 12 hours for midnight rollover."""
         mock_now = datetime(2024, 12, 15, 12, 0, 0, tzinfo=timezone.utc)
         with patch("todo_bot.scheduler.datetime") as mock_datetime:
             mock_datetime.now.return_value = mock_now
             mock_datetime.side_effect = lambda *args, **kwargs: datetime(*args, **kwargs)
             
-            seconds = seconds_until_next_midnight_utc()
+            seconds = seconds_until_next_rollover_hour(rollover_hour=0)
             # Should be approximately 12 hours
             assert 11 * 3600 < seconds <= 12 * 3600
+
+    def test_custom_rollover_hour(self) -> None:
+        """Should work with custom rollover hour."""
+        # At 10:00 UTC, if rollover is at 14:00, should be about 4 hours
+        mock_now = datetime(2024, 12, 15, 10, 0, 0, tzinfo=timezone.utc)
+        with patch("todo_bot.scheduler.datetime") as mock_datetime:
+            mock_datetime.now.return_value = mock_now
+            mock_datetime.side_effect = lambda *args, **kwargs: datetime(*args, **kwargs)
+            
+            seconds = seconds_until_next_rollover_hour(rollover_hour=14)
+            # Should be approximately 4 hours
+            assert 3 * 3600 < seconds <= 4 * 3600
+
+    def test_rollover_hour_passed_today(self) -> None:
+        """Should return time until tomorrow's rollover if hour already passed."""
+        # At 16:00 UTC, if rollover is at 14:00, should be about 22 hours
+        mock_now = datetime(2024, 12, 15, 16, 0, 0, tzinfo=timezone.utc)
+        with patch("todo_bot.scheduler.datetime") as mock_datetime:
+            mock_datetime.now.return_value = mock_now
+            mock_datetime.side_effect = lambda *args, **kwargs: datetime(*args, **kwargs)
+            
+            seconds = seconds_until_next_rollover_hour(rollover_hour=14)
+            # Should be approximately 22 hours (until 14:00 tomorrow)
+            assert 21 * 3600 < seconds <= 22 * 3600
 
 
 class TestGetYesterdayAndToday:
@@ -104,7 +128,13 @@ class TestRolloverScheduler:
         """Should initialize with bot and storage."""
         assert scheduler.bot is mock_bot
         assert scheduler.storage is mock_storage
+        assert scheduler.rollover_hour == 0  # Default
         assert scheduler._last_rollover_date is None
+
+    def test_init_with_custom_rollover_hour(self, mock_bot: MagicMock, mock_storage: MagicMock) -> None:
+        """Should accept custom rollover hour."""
+        scheduler = RolloverScheduler(mock_bot, mock_storage, rollover_hour=14)
+        assert scheduler.rollover_hour == 14
 
     def test_cog_load_starts_task(self, scheduler: RolloverScheduler) -> None:
         """cog_load should start the midnight rollover task."""
@@ -208,7 +238,7 @@ class TestRolloverScheduler:
         self, scheduler: RolloverScheduler, mock_bot: MagicMock
     ) -> None:
         """before_midnight_rollover should wait for bot to be ready."""
-        with patch("todo_bot.scheduler.seconds_until_next_midnight_utc", return_value=0.01):
+        with patch("todo_bot.scheduler.seconds_until_next_rollover_hour", return_value=0.01):
             with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
                 await scheduler.before_midnight_rollover()
                 
@@ -230,6 +260,17 @@ class TestSetupScheduler:
         
         assert isinstance(scheduler, RolloverScheduler)
         mock_bot.add_cog.assert_called_once_with(scheduler)
+
+    @pytest.mark.asyncio
+    async def test_setup_scheduler_with_custom_rollover_hour(self) -> None:
+        """setup_scheduler should accept custom rollover hour."""
+        mock_bot = MagicMock()
+        mock_bot.add_cog = AsyncMock()
+        mock_storage = MagicMock()
+        
+        scheduler = await setup_scheduler(mock_bot, mock_storage, rollover_hour=6)
+        
+        assert scheduler.rollover_hour == 6
 
     @pytest.mark.asyncio
     async def test_setup_scheduler_returns_scheduler(self) -> None:

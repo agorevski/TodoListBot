@@ -29,7 +29,7 @@ DEFAULT_RETENTION_DAYS: Final[int] = 0  # Disabled by default
 
 # Auto-rollover settings
 DEFAULT_ENABLE_AUTO_ROLLOVER: Final[bool] = True
-ROLLOVER_HOUR_UTC: Final[int] = 0  # Midnight UTC
+DEFAULT_ROLLOVER_HOUR_UTC: Final[int] = 0  # Midnight UTC
 
 
 @dataclass(frozen=True)
@@ -46,6 +46,7 @@ class BotConfig:
     sync_commands_globally: bool = True
     retention_days: int = DEFAULT_RETENTION_DAYS
     enable_auto_rollover: bool = DEFAULT_ENABLE_AUTO_ROLLOVER
+    rollover_hour_utc: int = DEFAULT_ROLLOVER_HOUR_UTC
 
     @classmethod
     def from_env(cls) -> "BotConfig":
@@ -55,7 +56,7 @@ class BotConfig:
             BotConfig instance with values from environment
 
         Raises:
-            ValueError: If DISCORD_TOKEN is not set
+            ValueError: If DISCORD_TOKEN is not set or ROLLOVER_HOUR_UTC is invalid
         """
         import os
 
@@ -69,6 +70,23 @@ class BotConfig:
         sync_env = os.getenv("SYNC_COMMANDS_GLOBALLY", "true")
         rollover_env = os.getenv("ENABLE_AUTO_ROLLOVER", "true")
 
+        # Parse rollover hour with validation
+        rollover_hour_str = os.getenv(
+            "ROLLOVER_HOUR_UTC", str(DEFAULT_ROLLOVER_HOUR_UTC)
+        )
+        try:
+            rollover_hour = int(rollover_hour_str)
+            if not 0 <= rollover_hour <= 23:
+                raise ValueError(
+                    f"ROLLOVER_HOUR_UTC must be between 0 and 23, got {rollover_hour}"
+                )
+        except ValueError as e:
+            if "must be between" in str(e):
+                raise
+            raise ValueError(
+                f"ROLLOVER_HOUR_UTC must be a valid integer, got '{rollover_hour_str}'"
+            ) from e
+
         return cls(
             discord_token=token,
             database_path=os.getenv("DATABASE_PATH", DEFAULT_DB_PATH),
@@ -78,4 +96,5 @@ class BotConfig:
                 os.getenv("RETENTION_DAYS", str(DEFAULT_RETENTION_DAYS))
             ),
             enable_auto_rollover=rollover_env.lower() == "true",
+            rollover_hour_utc=rollover_hour,
         )

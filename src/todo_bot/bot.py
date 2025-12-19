@@ -91,12 +91,18 @@ class TodoBot(commands.Bot):
 
         # Set up the rollover scheduler if enabled
         enable_rollover = True
+        rollover_hour = 0  # Default to midnight UTC
         if self._config:
             enable_rollover = self._config.enable_auto_rollover
+            rollover_hour = self._config.rollover_hour_utc
 
         if enable_rollover:
-            self._scheduler = await setup_scheduler(self, self.storage)
-            logger.info("Rollover scheduler enabled")
+            self._scheduler = await setup_scheduler(
+                self, self.storage, rollover_hour=rollover_hour
+            )
+            logger.info(
+                "Rollover scheduler enabled (rollover at %02d:00 UTC)", rollover_hour
+            )
         else:
             logger.info("Rollover scheduler disabled (enable_auto_rollover=false)")
 
@@ -108,11 +114,15 @@ class TodoBot(commands.Bot):
 
     async def close(self) -> None:
         """Clean up resources when the bot shuts down."""
+        import aiosqlite
+
+        from .exceptions import StorageError
+
         logger.info("Shutting down bot...")
         try:
             await self.storage.close()
             logger.info("Storage closed")
-        except Exception as e:
+        except (StorageError, aiosqlite.Error) as e:
             logger.error("Error closing storage: %s", e)
         finally:
             await super().close()

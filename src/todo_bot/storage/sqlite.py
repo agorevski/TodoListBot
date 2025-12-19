@@ -388,27 +388,35 @@ class SQLiteTaskStorage(TaskStorage):
 
         conn = self._ensure_connected()
 
-        # Build dynamic UPDATE query using explicit column updates
-        set_clauses = []
-        params: list = []
+        # Use explicit query variants to avoid dynamic SQL construction
+        if description is not None and priority is not None:
+            cursor = await conn.execute(
+                """
+                UPDATE tasks
+                SET description = ?, priority = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ? AND server_id = ? AND channel_id = ? AND user_id = ?
+                """,
+                (description, priority.value, task_id, server_id, channel_id, user_id),
+            )
+        elif description is not None:
+            cursor = await conn.execute(
+                """
+                UPDATE tasks
+                SET description = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ? AND server_id = ? AND channel_id = ? AND user_id = ?
+                """,
+                (description, task_id, server_id, channel_id, user_id),
+            )
+        else:  # priority is not None
+            cursor = await conn.execute(
+                """
+                UPDATE tasks
+                SET priority = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ? AND server_id = ? AND channel_id = ? AND user_id = ?
+                """,
+                (priority.value, task_id, server_id, channel_id, user_id),
+            )
 
-        if description is not None:
-            set_clauses.append("description = ?")
-            params.append(description)
-
-        if priority is not None:
-            set_clauses.append("priority = ?")
-            params.append(priority.value)
-
-        set_clauses.append("updated_at = CURRENT_TIMESTAMP")
-        params.extend([task_id, server_id, channel_id, user_id])
-
-        query = f"""
-            UPDATE tasks SET {', '.join(set_clauses)}
-            WHERE id = ? AND server_id = ? AND channel_id = ? AND user_id = ?
-        """
-
-        cursor = await conn.execute(query, params)
         await conn.commit()
 
         if cursor.rowcount > 0:

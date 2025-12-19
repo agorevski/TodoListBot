@@ -1,5 +1,6 @@
 """Registry for tracking active task list views."""
 
+import asyncio
 import logging
 from datetime import date
 from typing import TYPE_CHECKING
@@ -23,12 +24,15 @@ class ViewRegistry:
 
     The registry uses weak references where possible to avoid memory leaks,
     and views are expected to unregister themselves on timeout.
+
+    Thread-safety is provided via asyncio.Lock for async operations.
     """
 
     def __init__(self) -> None:
         """Initialize the view registry."""
         # Maps (server_id, channel_id, user_id, task_date) -> set of views
         self._views: dict[ViewKey, WeakSet["TaskListView"]] = {}
+        self._lock: asyncio.Lock = asyncio.Lock()
         logger.debug("ViewRegistry initialized")
 
     def _make_key(
@@ -109,6 +113,9 @@ class ViewRegistry:
     ) -> int:
         """Notify all views matching the given parameters to refresh.
 
+        Uses async locking to prevent race conditions during concurrent
+        notifications and view modifications.
+
         Args:
             server_id: Discord server (guild) ID
             channel_id: Discord channel ID
@@ -118,21 +125,24 @@ class ViewRegistry:
         Returns:
             The number of views that were notified
         """
-        key = self._make_key(server_id, channel_id, user_id, task_date)
-        views = self._views.get(key)
+        async with self._lock:
+            key = self._make_key(server_id, channel_id, user_id, task_date)
+            views = self._views.get(key)
 
-        if not views:
-            logger.debug(
-                "No views to notify for user %d, channel %d, date %s",
-                user_id,
-                channel_id,
-                task_date,
-            )
-            return 0
+            if not views:
+                logger.debug(
+                    "No views to notify for user %d, channel %d, date %s",
+                    user_id,
+                    channel_id,
+                    task_date,
+                )
+                return 0
 
-        # Copy the set to avoid modification during iteration
-        views_to_notify = list(views)
+            # Copy the set to avoid modification during iteration
+            views_to_notify = list(views)
+
         notified = 0
+        failed_views = []
 
         for view in views_to_notify:
             try:
@@ -144,8 +154,11 @@ class ViewRegistry:
                     user_id,
                     e,
                 )
-                # Remove failed views from registry
-                self.unregister(view)
+                failed_views.append(view)
+
+        # Remove failed views outside the main loop
+        for view in failed_views:
+            self.unregister(view)
 
         logger.debug(
             "Notified %d view(s) for user %d, channel %d, date %s",

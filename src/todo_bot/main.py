@@ -4,6 +4,7 @@ import atexit
 import logging
 import signal
 import sys
+import threading
 import types
 
 from .bot import run_bot
@@ -12,23 +13,31 @@ logger = logging.getLogger(__name__)
 
 
 class CleanupManager:
-    """Manages cleanup registration without global mutable state."""
+    """Manages cleanup registration with thread-safe instance management.
+
+    Uses a lock to ensure thread safety when accessing the singleton instance.
+    """
 
     _instance: "CleanupManager | None" = None
-    _registered: bool = False
+    _lock: threading.Lock = threading.Lock()
+
+    def __init__(self) -> None:
+        """Initialize the cleanup manager."""
+        self._registered: bool = False
 
     @classmethod
     def get_instance(cls) -> "CleanupManager":
-        """Get the singleton instance."""
-        if cls._instance is None:
-            cls._instance = cls()
-        return cls._instance
+        """Get the singleton instance (thread-safe)."""
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = cls()
+            return cls._instance
 
     @classmethod
     def reset(cls) -> None:
         """Reset the singleton (for testing)."""
-        cls._instance = None
-        cls._registered = False
+        with cls._lock:
+            cls._instance = None
 
     def register(self) -> None:
         """Register atexit handler for final cleanup logging.
@@ -36,10 +45,15 @@ class CleanupManager:
         This ensures that even if an unexpected exit occurs,
         we log that the bot is shutting down.
         """
-        if not CleanupManager._registered:
+        if not self._registered:
             atexit.register(self._cleanup_on_exit)
-            CleanupManager._registered = True
+            self._registered = True
             logger.debug("Cleanup handler registered")
+
+    @property
+    def is_registered(self) -> bool:
+        """Check if cleanup handler is registered."""
+        return self._registered
 
     @staticmethod
     def _cleanup_on_exit() -> None:

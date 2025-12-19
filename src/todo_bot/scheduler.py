@@ -6,24 +6,30 @@ from datetime import date, datetime, timedelta, timezone
 
 from discord.ext import commands, tasks
 
-from .config import ROLLOVER_HOUR_UTC
+from .config import DEFAULT_ROLLOVER_HOUR_UTC
 from .storage.base import TaskStorage
 
 logger = logging.getLogger(__name__)
 
 
-def seconds_until_next_midnight_utc() -> float:
-    """Calculate seconds until the next midnight UTC.
+def seconds_until_next_rollover_hour(rollover_hour: int = DEFAULT_ROLLOVER_HOUR_UTC) -> float:
+    """Calculate seconds until the next rollover hour in UTC.
+
+    Args:
+        rollover_hour: The hour (0-23) at which rollover should occur
 
     Returns:
-        Number of seconds until midnight UTC
+        Number of seconds until the next rollover hour
     """
     now = datetime.now(timezone.utc)
-    # Next midnight is at 00:00:00 the next day
-    next_midnight = datetime(
-        now.year, now.month, now.day, ROLLOVER_HOUR_UTC, 0, 0, tzinfo=timezone.utc
-    ) + timedelta(days=1)
-    delta = next_midnight - now
+    # Calculate next rollover time
+    next_rollover = datetime(
+        now.year, now.month, now.day, rollover_hour, 0, 0, tzinfo=timezone.utc
+    )
+    # If we've already passed the rollover hour today, schedule for tomorrow
+    if now >= next_rollover:
+        next_rollover += timedelta(days=1)
+    delta = next_rollover - now
     return delta.total_seconds()
 
 
@@ -39,22 +45,29 @@ def get_yesterday_and_today() -> tuple[date, date]:
 
 
 class RolloverScheduler(commands.Cog):
-    """Cog that handles automatic midnight rollover of incomplete tasks.
+    """Cog that handles automatic rollover of incomplete tasks.
 
-    This scheduler runs a background task that triggers at midnight UTC
-    each day. When triggered, it copies all incomplete tasks from the
-    previous day to the new day's list while preserving the originals.
+    This scheduler runs a background task that triggers at the configured
+    rollover hour each day. When triggered, it copies all incomplete tasks
+    from the previous day to the new day's list while preserving the originals.
     """
 
-    def __init__(self, bot: commands.Bot, storage: TaskStorage) -> None:
+    def __init__(
+        self,
+        bot: commands.Bot,
+        storage: TaskStorage,
+        rollover_hour: int = DEFAULT_ROLLOVER_HOUR_UTC,
+    ) -> None:
         """Initialize the rollover scheduler.
 
         Args:
             bot: The Discord bot instance
             storage: The task storage backend
+            rollover_hour: The hour (0-23) in UTC at which to perform rollover
         """
         self.bot = bot
         self.storage = storage
+        self.rollover_hour = rollover_hour
         self._last_rollover_date: date | None = None
 
     def cog_load(self) -> None:
@@ -102,17 +115,18 @@ class RolloverScheduler(commands.Cog):
 
     @midnight_rollover_task.before_loop
     async def before_midnight_rollover(self) -> None:
-        """Wait until midnight UTC before starting the rollover loop."""
+        """Wait until the configured rollover hour before starting the loop."""
         await self.bot.wait_until_ready()
 
-        seconds_to_wait = seconds_until_next_midnight_utc()
+        seconds_to_wait = seconds_until_next_rollover_hour(self.rollover_hour)
         hours = seconds_to_wait / 3600
         logger.info(
-            "Rollover scheduler waiting %.1f hours until next midnight UTC",
+            "Rollover scheduler waiting %.1f hours until next rollover time (%02d:00 UTC)",
             hours,
+            self.rollover_hour,
         )
 
-        # For the first run, we wait until midnight
+        # For the first run, we wait until the rollover hour
         # Subsequent runs are handled by the 24-hour loop
         await asyncio.sleep(seconds_to_wait)
 
@@ -148,16 +162,21 @@ class RolloverScheduler(commands.Cog):
         return total_rolled
 
 
-async def setup_scheduler(bot: commands.Bot, storage: TaskStorage) -> RolloverScheduler:
+async def setup_scheduler(
+    bot: commands.Bot,
+    storage: TaskStorage,
+    rollover_hour: int = DEFAULT_ROLLOVER_HOUR_UTC,
+) -> RolloverScheduler:
     """Set up and add the rollover scheduler cog.
 
     Args:
         bot: The Discord bot instance
         storage: The task storage backend
+        rollover_hour: The hour (0-23) in UTC at which to perform rollover
 
     Returns:
         The RolloverScheduler cog instance
     """
-    scheduler = RolloverScheduler(bot, storage)
+    scheduler = RolloverScheduler(bot, storage, rollover_hour=rollover_hour)
     await bot.add_cog(scheduler)
     return scheduler

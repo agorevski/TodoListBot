@@ -81,6 +81,18 @@ class TestCleanupManager:
         assert instance1 is not instance2
         CleanupManager.reset()
 
+    def test_cleanup_manager_is_registered_property(self) -> None:
+        """Test CleanupManager.is_registered property."""
+        CleanupManager.reset()
+        manager = CleanupManager.get_instance()
+        assert manager.is_registered is False
+
+        with patch("atexit.register"):
+            manager.register()
+            assert manager.is_registered is True
+
+        CleanupManager.reset()
+
 
 class TestRegisterCleanup:
     """Tests for register_cleanup function."""

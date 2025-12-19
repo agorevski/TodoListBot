@@ -136,8 +136,10 @@ class TestTodoBot:
     @pytest.mark.asyncio
     async def test_close_with_storage_error(self, caplog) -> None:
         """Test bot close handles storage error gracefully."""
+        from todo_bot.exceptions import StorageError
+
         mock_storage = MagicMock()
-        mock_storage.close = AsyncMock(side_effect=Exception("Storage close failed"))
+        mock_storage.close = AsyncMock(side_effect=StorageError("Storage close failed"))
 
         bot = TodoBot(storage=mock_storage)
 

@@ -10,6 +10,7 @@ from todo_bot.config import (
     CONNECTION_RETRY_DELAY_SECONDS,
     DEFAULT_DB_PATH,
     DEFAULT_RETENTION_DAYS,
+    DEFAULT_ROLLOVER_HOUR_UTC,
     MAX_BUTTONS_PER_VIEW,
     MAX_CONNECTION_RETRIES,
     MAX_DESCRIPTION_LENGTH,
@@ -55,6 +56,10 @@ class TestConstants:
         """Test retention constants are set correctly."""
         assert DEFAULT_RETENTION_DAYS == 0
 
+    def test_rollover_constants(self):
+        """Test rollover constants are set correctly."""
+        assert DEFAULT_ROLLOVER_HOUR_UTC == 0
+
 
 class TestBotConfig:
     """Tests for BotConfig dataclass."""
@@ -68,6 +73,7 @@ class TestBotConfig:
         assert config.log_level == "INFO"
         assert config.sync_commands_globally is True
         assert config.retention_days == 0
+        assert config.rollover_hour_utc == 0
 
     def test_bot_config_custom_values(self):
         """Test BotConfig creation with custom values."""
@@ -77,6 +83,7 @@ class TestBotConfig:
             log_level="DEBUG",
             sync_commands_globally=False,
             retention_days=30,
+            rollover_hour_utc=14,
         )
 
         assert config.discord_token == "my_token"
@@ -84,6 +91,7 @@ class TestBotConfig:
         assert config.log_level == "DEBUG"
         assert config.sync_commands_globally is False
         assert config.retention_days == 30
+        assert config.rollover_hour_utc == 14
 
     def test_bot_config_is_frozen(self):
         """Test BotConfig is immutable (frozen)."""
@@ -102,6 +110,7 @@ class TestBotConfig:
                 "LOG_LEVEL": "DEBUG",
                 "SYNC_COMMANDS_GLOBALLY": "false",
                 "RETENTION_DAYS": "60",
+                "ROLLOVER_HOUR_UTC": "14",
             },
         ):
             config = BotConfig.from_env()
@@ -111,6 +120,7 @@ class TestBotConfig:
             assert config.log_level == "DEBUG"
             assert config.sync_commands_globally is False
             assert config.retention_days == 60
+            assert config.rollover_hour_utc == 14
 
     def test_bot_config_from_env_defaults(self):
         """Test BotConfig.from_env() uses defaults for missing values."""
@@ -128,6 +138,7 @@ class TestBotConfig:
             assert config.log_level == "INFO"
             assert config.sync_commands_globally is True
             assert config.retention_days == 0
+            assert config.rollover_hour_utc == 0
 
     def test_bot_config_from_env_no_token_raises(self):
         """Test BotConfig.from_env() raises when DISCORD_TOKEN is missing."""
@@ -136,3 +147,33 @@ class TestBotConfig:
                 BotConfig.from_env()
 
             assert "No Discord token provided" in str(exc_info.value)
+
+    def test_bot_config_from_env_invalid_rollover_hour_raises(self):
+        """Test BotConfig.from_env() raises when ROLLOVER_HOUR_UTC is invalid."""
+        with patch.dict(
+            os.environ,
+            {
+                "DISCORD_TOKEN": "token",
+                "ROLLOVER_HOUR_UTC": "25",
+            },
+            clear=True,
+        ):
+            with pytest.raises(ValueError) as exc_info:
+                BotConfig.from_env()
+
+            assert "must be between 0 and 23" in str(exc_info.value)
+
+    def test_bot_config_from_env_non_integer_rollover_hour_raises(self):
+        """Test BotConfig.from_env() raises when ROLLOVER_HOUR_UTC is not an integer."""
+        with patch.dict(
+            os.environ,
+            {
+                "DISCORD_TOKEN": "token",
+                "ROLLOVER_HOUR_UTC": "noon",
+            },
+            clear=True,
+        ):
+            with pytest.raises(ValueError) as exc_info:
+                BotConfig.from_env()
+
+            assert "must be a valid integer" in str(exc_info.value)
