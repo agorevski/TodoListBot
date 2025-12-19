@@ -8,8 +8,10 @@ import pytest
 from todo_bot.main import (
     CleanupManager,
     ShutdownHandler,
+    get_cleanup_manager,
     main,
     register_cleanup,
+    reset_cleanup_manager,
     setup_signal_handlers,
 )
 
@@ -66,32 +68,37 @@ class TestCleanupManager:
     """Tests for CleanupManager class."""
 
     def test_cleanup_manager_singleton(self) -> None:
-        """Test CleanupManager returns the same instance."""
-        CleanupManager.reset()
-        instance1 = CleanupManager.get_instance()
-        instance2 = CleanupManager.get_instance()
+        """Test get_cleanup_manager returns the same instance."""
+        reset_cleanup_manager()
+        instance1 = get_cleanup_manager()
+        instance2 = get_cleanup_manager()
         assert instance1 is instance2
-        CleanupManager.reset()
+        reset_cleanup_manager()
 
     def test_cleanup_manager_reset(self) -> None:
-        """Test CleanupManager.reset() creates new instance."""
-        instance1 = CleanupManager.get_instance()
-        CleanupManager.reset()
-        instance2 = CleanupManager.get_instance()
+        """Test reset_cleanup_manager() creates new instance."""
+        instance1 = get_cleanup_manager()
+        reset_cleanup_manager()
+        instance2 = get_cleanup_manager()
         assert instance1 is not instance2
-        CleanupManager.reset()
+        reset_cleanup_manager()
 
     def test_cleanup_manager_is_registered_property(self) -> None:
         """Test CleanupManager.is_registered property."""
-        CleanupManager.reset()
-        manager = CleanupManager.get_instance()
+        reset_cleanup_manager()
+        manager = get_cleanup_manager()
         assert manager.is_registered is False
 
         with patch("atexit.register"):
             manager.register()
             assert manager.is_registered is True
 
-        CleanupManager.reset()
+        reset_cleanup_manager()
+
+    def test_cleanup_manager_direct_instantiation(self) -> None:
+        """Test CleanupManager can be instantiated directly."""
+        manager = CleanupManager()
+        assert manager.is_registered is False
 
 
 class TestRegisterCleanup:
@@ -100,7 +107,7 @@ class TestRegisterCleanup:
     def test_register_cleanup_registers_atexit(self) -> None:
         """Test register_cleanup registers atexit handler."""
         # Reset the singleton
-        CleanupManager.reset()
+        reset_cleanup_manager()
 
         with patch("atexit.register") as mock_register:
             register_cleanup()
@@ -108,12 +115,12 @@ class TestRegisterCleanup:
             mock_register.assert_called_once()
 
         # Restore
-        CleanupManager.reset()
+        reset_cleanup_manager()
 
     def test_register_cleanup_only_once(self) -> None:
         """Test register_cleanup only registers once."""
         # Reset and register once
-        CleanupManager.reset()
+        reset_cleanup_manager()
 
         with patch("atexit.register") as mock_register:
             register_cleanup()  # First call
@@ -123,7 +130,7 @@ class TestRegisterCleanup:
             mock_register.assert_called_once()
 
         # Restore
-        CleanupManager.reset()
+        reset_cleanup_manager()
 
 
 class TestCleanupOnExit:
@@ -144,7 +151,7 @@ class TestMain:
 
     def test_main_calls_run_bot(self) -> None:
         """Test main function calls run_bot."""
-        CleanupManager.reset()
+        reset_cleanup_manager()
         with (
             patch("todo_bot.main.setup_signal_handlers"),
             patch("todo_bot.main.register_cleanup"),
@@ -153,4 +160,4 @@ class TestMain:
             main()
 
             mock_run_bot.assert_called_once()
-        CleanupManager.reset()
+        reset_cleanup_manager()

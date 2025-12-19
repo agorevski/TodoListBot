@@ -288,7 +288,8 @@ class TaskListView(discord.ui.View):
 
         # Update the message with retry logic for rate limits
         try:
-            await interaction.message.edit(  # type: ignore
+            # type: ignore[union-attr] - message is guaranteed to exist after button callback
+            await interaction.message.edit(  # type: ignore[union-attr]
                 content=self.get_content(),
                 view=self,
             )

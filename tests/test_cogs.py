@@ -215,6 +215,7 @@ class TestMarkDoneCommand:
         mock_interaction.response.send_message.assert_called_once()
         call_args = mock_interaction.response.send_message.call_args
         assert "marked as done" in call_args[0][0]
+        assert call_args[1]["ephemeral"] is True  # Success should be ephemeral
 
     @pytest.mark.asyncio
     async def test_mark_done_not_found(
@@ -337,6 +338,7 @@ class TestClearTasksCommand:
         mock_interaction.response.send_message.assert_called_once()
         call_args = mock_interaction.response.send_message.call_args
         assert "Cleared 3" in call_args[0][0]
+        assert call_args[1]["ephemeral"] is True  # Success should be ephemeral
 
     @pytest.mark.asyncio
     async def test_clear_tasks_none(
@@ -350,6 +352,7 @@ class TestClearTasksCommand:
         mock_interaction.response.send_message.assert_called_once()
         call_args = mock_interaction.response.send_message.call_args
         assert "No completed tasks" in call_args[0][0]
+        assert call_args[1]["ephemeral"] is True  # Should be ephemeral
 
     @pytest.mark.asyncio
     async def test_clear_tasks_no_guild(

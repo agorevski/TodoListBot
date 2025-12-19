@@ -12,32 +12,21 @@ from .bot import run_bot
 logger = logging.getLogger(__name__)
 
 
+# Module-level lock for thread-safe singleton access
+_cleanup_manager_lock = threading.Lock()
+_cleanup_manager_instance: "CleanupManager | None" = None
+
+
 class CleanupManager:
-    """Manages cleanup registration with thread-safe instance management.
+    """Manages cleanup registration.
 
-    Uses a lock to ensure thread safety when accessing the singleton instance.
+    Note: Use get_cleanup_manager() to get the singleton instance.
+    Direct instantiation is allowed but not recommended for production use.
     """
-
-    _instance: "CleanupManager | None" = None
-    _lock: threading.Lock = threading.Lock()
 
     def __init__(self) -> None:
         """Initialize the cleanup manager."""
         self._registered: bool = False
-
-    @classmethod
-    def get_instance(cls) -> "CleanupManager":
-        """Get the singleton instance (thread-safe)."""
-        with cls._lock:
-            if cls._instance is None:
-                cls._instance = cls()
-            return cls._instance
-
-    @classmethod
-    def reset(cls) -> None:
-        """Reset the singleton (for testing)."""
-        with cls._lock:
-            cls._instance = None
 
     def register(self) -> None:
         """Register atexit handler for final cleanup logging.
@@ -64,6 +53,32 @@ class CleanupManager:
         This function is a safety net for logging purposes.
         """
         logger.info("Bot process exiting. Cleanup completed.")
+
+
+def get_cleanup_manager() -> CleanupManager:
+    """Get the singleton CleanupManager instance (thread-safe).
+
+    Uses module-level state with a lock for thread safety.
+    This is the preferred pattern over class-level mutable state.
+
+    Returns:
+        The singleton CleanupManager instance.
+    """
+    global _cleanup_manager_instance
+    with _cleanup_manager_lock:
+        if _cleanup_manager_instance is None:
+            _cleanup_manager_instance = CleanupManager()
+        return _cleanup_manager_instance
+
+
+def reset_cleanup_manager() -> None:
+    """Reset the singleton CleanupManager (for testing).
+
+    This allows tests to start with a fresh CleanupManager instance.
+    """
+    global _cleanup_manager_instance
+    with _cleanup_manager_lock:
+        _cleanup_manager_instance = None
 
 
 class ShutdownHandler:
@@ -129,7 +144,7 @@ def register_cleanup() -> None:
     This ensures that even if an unexpected exit occurs,
     we log that the bot is shutting down.
     """
-    CleanupManager.get_instance().register()
+    get_cleanup_manager().register()
 
 
 def main() -> None:

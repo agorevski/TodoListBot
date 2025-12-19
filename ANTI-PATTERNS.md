@@ -4,67 +4,7 @@ This document lists development anti-patterns identified in the TodoListBot code
 
 ---
 
-## 1. **Type: ignore Comments Without Explanation**
-
-**Location:** `src/todo_bot/views/task_view.py` (line 291)
-
-**Issue:** Using `# type: ignore` without explaining why the type check is being suppressed.
-
-```python
-await interaction.message.edit(  # type: ignore
-    content=self.get_content(),
-    view=self,
-)
-```
-
-**Why it's bad:** Makes it unclear whether this is hiding a real bug or a known limitation of the type system.
-
-**Recommendation:** Add a comment explaining why the type ignore is necessary, e.g., `# type: ignore[union-attr]  # message is always present after button callback`
-
----
-
-## 2. **Singleton Pattern with Class-Level Mutable State**
-
-**Location:** `src/todo_bot/main.py` (lines 15-40)
-
-**Issue:** The `CleanupManager` uses a class-level `_instance` variable for singleton pattern with mutable state.
-
-```python
-class CleanupManager:
-    _instance: "CleanupManager | None" = None
-    _lock: threading.Lock = threading.Lock()
-```
-
-**Why it's bad:** Class-level mutable state can cause issues in testing and makes the code harder to reason about. The `_lock` is created at class definition time, which is unusual.
-
-**Recommendation:** Consider using a module-level singleton or dependency injection pattern instead.
-
----
-
-## 3. **Inconsistent Error Response Handling**
-
-**Location:** `src/todo_bot/cogs/tasks.py`
-
-**Issue:** Some error responses use `ephemeral=True` while success responses are mixed. The pattern isn't consistent.
-
-```python
-# Error - ephemeral
-await interaction.response.send_message(ErrorMessages.GUILD_ONLY, ephemeral=True)
-
-# Success - not ephemeral
-await interaction.response.send_message(format_task_done(task))
-
-# Success - ephemeral
-await interaction.response.send_message(format_task_added(task), ephemeral=True)
-```
-
-**Why it's bad:** Inconsistent UX - some success messages are visible to all, others only to the user.
-
-**Recommendation:** Document and standardize when responses should be ephemeral.
-
----
-
-## 4. **Database Connection Not Using Context Manager Consistently**
+## 1. **Database Connection Not Using Context Manager Consistently**
 
 **Location:** `src/todo_bot/storage/sqlite.py`
 
@@ -82,7 +22,7 @@ self.storage = SQLiteTaskStorage(db_path=db_path)
 
 ---
 
-## 5. **No Input Validation in Storage Layer**
+## 2. **No Input Validation in Storage Layer**
 
 **Location:** `src/todo_bot/storage/sqlite.py`
 
@@ -103,7 +43,7 @@ async def add_task(
 
 ---
 
-## 6. **Rollover Task Potential N+1 Query Problem**
+## 3. **Rollover Task Potential N+1 Query Problem**
 
 **Location:** `src/todo_bot/storage/sqlite.py` (lines 586-683)
 
@@ -127,7 +67,5 @@ for task_row in incomplete_tasks:
 
 | Severity | Count | Categories |
 |----------|-------|------------|
-| High | 1 | Security (secrets in .env) |
 | Medium | 3 | N+1 queries, unused context managers, missing validation |
-| Low | 3 | Style inconsistencies |
 

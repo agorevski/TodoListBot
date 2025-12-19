@@ -270,3 +270,84 @@ class TestStatusCommand:
 
         # Should still respond, just with error indicator
         interaction.response.send_message.assert_called_once()
+
+
+class TestRolloverCommand:
+    """Tests for the /rollover command."""
+
+    @pytest.fixture
+    def mock_bot(self):
+        """Create a mock bot."""
+        bot = MagicMock()
+        bot.guilds = []
+        bot.latency = 0.05
+        return bot
+
+    @pytest.fixture
+    def mock_storage(self):
+        """Create a mock storage."""
+        storage = MagicMock()
+        storage.get_tasks = AsyncMock(return_value=[])
+        storage.rollover_incomplete_tasks = AsyncMock(return_value=0)
+        return storage
+
+    @pytest.fixture
+    def cog(self, mock_bot, mock_storage):
+        """Create a TasksCog instance."""
+        return TasksCog(mock_bot, mock_storage)
+
+    @pytest.mark.asyncio
+    async def test_rollover_no_incomplete_tasks(self, cog, mock_storage):
+        """Test rollover when no incomplete tasks from yesterday."""
+        interaction = create_mock_interaction()
+        mock_storage.get_tasks.return_value = []
+
+        await cog.rollover_tasks.callback(cog, interaction)
+
+        interaction.response.send_message.assert_called_once()
+        call_args = interaction.response.send_message.call_args
+        assert "No incomplete tasks" in call_args[0][0]
+        assert call_args[1]["ephemeral"] is True
+
+    @pytest.mark.asyncio
+    async def test_rollover_success(self, cog, mock_storage):
+        """Test successful rollover of tasks."""
+        interaction = create_mock_interaction()
+        incomplete_task = create_sample_task()
+        mock_storage.get_tasks.return_value = [incomplete_task]
+        mock_storage.rollover_incomplete_tasks.return_value = 1
+
+        await cog.rollover_tasks.callback(cog, interaction)
+
+        mock_storage.rollover_incomplete_tasks.assert_called_once()
+        interaction.response.send_message.assert_called_once()
+        call_args = interaction.response.send_message.call_args
+        assert "Rolled over" in call_args[0][0]
+        assert call_args[1]["ephemeral"] is True  # Success should be ephemeral
+
+    @pytest.mark.asyncio
+    async def test_rollover_already_rolled(self, cog, mock_storage):
+        """Test rollover when tasks already rolled over."""
+        interaction = create_mock_interaction()
+        incomplete_task = create_sample_task()
+        mock_storage.get_tasks.return_value = [incomplete_task]
+        mock_storage.rollover_incomplete_tasks.return_value = 0  # Already rolled
+
+        await cog.rollover_tasks.callback(cog, interaction)
+
+        interaction.response.send_message.assert_called_once()
+        call_args = interaction.response.send_message.call_args
+        assert "already rolled over" in call_args[0][0]
+        assert call_args[1]["ephemeral"] is True
+
+    @pytest.mark.asyncio
+    async def test_rollover_no_guild(self, cog, mock_storage):  # noqa: ARG002
+        """Test rollover in DM fails."""
+        interaction = create_mock_interaction(guild=False)
+
+        await cog.rollover_tasks.callback(cog, interaction)
+
+        interaction.response.send_message.assert_called_once()
+        call_args = interaction.response.send_message.call_args
+        assert "server" in call_args[0][0].lower()
+        assert call_args[1]["ephemeral"] is True

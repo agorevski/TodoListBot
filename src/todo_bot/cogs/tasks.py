@@ -264,7 +264,7 @@ class TasksCog(commands.Cog):
                 task_id,
                 interaction.user.id,
             )
-            await interaction.response.send_message(format_task_done(task))
+            await interaction.response.send_message(format_task_done(task), ephemeral=True)
 
             # Notify any active views to refresh
             await self.registry.notify(
@@ -488,7 +488,7 @@ class TasksCog(commands.Cog):
             interaction.user.id,
             count,
         )
-        await interaction.response.send_message(format_tasks_cleared(count))
+        await interaction.response.send_message(format_tasks_cleared(count), ephemeral=True)
 
         # Notify any active views to refresh (for today's date)
         if count > 0:
@@ -644,6 +644,7 @@ class TasksCog(commands.Cog):
             )
             await interaction.response.send_message(
                 f"🔄 Rolled over **{rolled_count}** incomplete task(s) from yesterday to today.",
+                ephemeral=True,
             )
 
             # Notify any active views to refresh
