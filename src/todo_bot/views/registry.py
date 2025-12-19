@@ -6,6 +6,10 @@ from datetime import date
 from typing import TYPE_CHECKING
 from weakref import WeakSet
 
+import discord
+
+from ..exceptions import StorageError
+
 if TYPE_CHECKING:
     from .task_view import TaskListView
 
@@ -148,13 +152,21 @@ class ViewRegistry:
             try:
                 await view.refresh_from_storage()
                 notified += 1
-            except Exception as e:
+            except (discord.errors.NotFound, discord.errors.HTTPException) as e:
+                # Discord API errors - view message may be deleted or rate limited
                 logger.warning(
-                    "Failed to refresh view for user %d: %s",
+                    "Discord error refreshing view for user %d: %s",
                     user_id,
                     e,
                 )
                 failed_views.append(view)
+            except StorageError as e:
+                # Database errors - log but don't remove view
+                logger.warning(
+                    "Storage error refreshing view for user %d: %s",
+                    user_id,
+                    e,
+                )
 
         # Remove failed views outside the main loop
         for view in failed_views:

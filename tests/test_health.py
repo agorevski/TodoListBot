@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from todo_bot.exceptions import StorageError
 from todo_bot.health import (
     check_database_accessible,
     check_imports,
@@ -152,9 +153,10 @@ class TestRunHealthCheck:
             patch("todo_bot.health.check_imports", return_value=True),
             patch("todo_bot.health.check_database_accessible", return_value=True),
             patch("asyncio.new_event_loop") as mock_loop,
+            patch("asyncio.set_event_loop"),
         ):
             mock_event_loop = MagicMock()
-            mock_event_loop.run_until_complete.side_effect = Exception(
+            mock_event_loop.run_until_complete.side_effect = StorageError(
                 "Connection error"
             )
             mock_loop.return_value = mock_event_loop

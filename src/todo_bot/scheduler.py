@@ -4,9 +4,11 @@ import asyncio
 import logging
 from datetime import date, datetime, timedelta, timezone
 
+import aiosqlite
 from discord.ext import commands, tasks
 
 from .config import DEFAULT_ROLLOVER_HOUR_UTC
+from .exceptions import StorageError
 from .storage.base import TaskStorage
 
 logger = logging.getLogger(__name__)
@@ -110,8 +112,10 @@ class RolloverScheduler(commands.Cog):
                 )
             else:
                 logger.info("Midnight rollover complete: no incomplete tasks to roll over")
-        except Exception as e:
-            logger.error("Error during midnight rollover: %s", e, exc_info=True)
+        except (StorageError, aiosqlite.Error) as e:
+            logger.error("Database error during midnight rollover: %s", e, exc_info=True)
+        except OSError as e:
+            logger.error("I/O error during midnight rollover: %s", e, exc_info=True)
 
     @midnight_rollover_task.before_loop
     async def before_midnight_rollover(self) -> None:

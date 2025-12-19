@@ -3,6 +3,7 @@
 from datetime import date
 from unittest.mock import AsyncMock, MagicMock
 
+import discord
 import pytest
 
 from tests.conftest import TEST_CHANNEL_ID, TEST_SERVER_ID, TEST_USER_ID
@@ -240,10 +241,13 @@ class TestViewRegistry:
 
     @pytest.mark.asyncio
     async def test_notify_removes_failed_views(self) -> None:
-        """Test notify removes views that fail to refresh."""
+        """Test notify removes views that fail to refresh due to Discord errors."""
+        from todo_bot.exceptions import StorageError
+
         registry = ViewRegistry()
         storage = MagicMock()
-        storage.get_tasks = AsyncMock(side_effect=Exception("Test error"))
+        # Simulate a storage error when getting tasks - this will propagate
+        storage.get_tasks = AsyncMock(side_effect=StorageError("Database connection lost"))
         task_date = date.today()
 
         view = TaskListView(
@@ -262,7 +266,8 @@ class TestViewRegistry:
 
         assert registry.get_view_count() == 1
 
-        # This should fail and remove the view
+        # This should log the storage error but NOT remove the view
+        # (only Discord errors cause removal since they indicate the view is invalid)
         count = await registry.notify(
             server_id=TEST_SERVER_ID,
             channel_id=TEST_CHANNEL_ID,
@@ -270,8 +275,9 @@ class TestViewRegistry:
             task_date=task_date,
         )
 
+        # Storage errors don't cause view removal (view may recover)
         assert count == 0
-        assert registry.get_view_count() == 0
+        assert registry.get_view_count() == 1  # View still registered
 
     @pytest.mark.asyncio
     async def test_cleanup_empty_entries(self) -> None:

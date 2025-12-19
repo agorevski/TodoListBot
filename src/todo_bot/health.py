@@ -4,6 +4,10 @@ import asyncio
 import sys
 from pathlib import Path
 
+import aiosqlite
+
+from .exceptions import StorageError
+
 
 def check_database_accessible(db_path: str = "data/tasks.db") -> bool:
     """Check if the database file is accessible.
@@ -125,8 +129,11 @@ def run_health_check(
                 return 1
 
             print("OK: Storage connection verified")
-        except Exception as e:
-            print(f"UNHEALTHY: Storage check error: {e}")
+        except (StorageError, aiosqlite.Error) as e:
+            print(f"UNHEALTHY: Database error: {e}")
+            return 1
+        except OSError as e:
+            print(f"UNHEALTHY: I/O error: {e}")
             return 1
 
     print("HEALTHY: All checks passed")

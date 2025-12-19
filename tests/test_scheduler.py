@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from todo_bot.exceptions import StorageError
 from todo_bot.scheduler import (
     RolloverScheduler,
     get_yesterday_and_today,
@@ -190,8 +191,8 @@ class TestRolloverScheduler:
     async def test_midnight_rollover_task_handles_exception(
         self, scheduler: RolloverScheduler, mock_storage: MagicMock
     ) -> None:
-        """Should handle exceptions gracefully."""
-        mock_storage.rollover_incomplete_tasks.side_effect = Exception("Database error")
+        """Should handle storage exceptions gracefully."""
+        mock_storage.rollover_incomplete_tasks.side_effect = StorageError("Database error")
         
         # Should not raise
         await scheduler.midnight_rollover_task()

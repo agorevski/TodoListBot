@@ -1,8 +1,8 @@
 """Formatting utilities for displaying tasks in Discord."""
 
 from datetime import date
-from typing import Optional
 
+from ..messages import DisplayMessages, SuccessMessages
 from ..models.task import Priority, Task
 
 
@@ -50,10 +50,9 @@ def _format_header(task_date: date) -> str:
     Returns:
         Formatted header string
     """
-    if task_date == date.today():
-        return "**Today's Tasks**"
-    else:
-        return f"**Tasks for {task_date.strftime('%B %d, %Y')}**"
+    is_today = task_date == date.today()
+    date_str = task_date.strftime("%B %d, %Y") if not is_today else None
+    return DisplayMessages.header(task_date=date_str, is_today=is_today)
 
 
 def _format_empty_message(task_date: date | None = None) -> str:
@@ -65,9 +64,9 @@ def _format_empty_message(task_date: date | None = None) -> str:
     Returns:
         Friendly empty message
     """
-    if task_date and task_date != date.today():
-        return f"📋 No tasks for {task_date.strftime('%B %d, %Y')}."
-    return "📋 No tasks for today. Use `/add` to create one!"
+    is_today = task_date is None or task_date == date.today()
+    date_str = task_date.strftime("%B %d, %Y") if task_date and not is_today else None
+    return DisplayMessages.empty_message(task_date=date_str, is_today=is_today)
 
 
 def _group_tasks_by_priority(tasks: list[Task]) -> dict[Priority, list[Task]]:
@@ -145,7 +144,7 @@ def format_task_added(task: Task) -> str:
     Returns:
         Confirmation message string
     """
-    return f"Added task #{task.id}: {task.description} ✅"
+    return SuccessMessages.task_added(task_id=task.id, description=task.description)
 
 
 def format_task_done(task: Task) -> str:
@@ -157,7 +156,7 @@ def format_task_done(task: Task) -> str:
     Returns:
         Confirmation message string
     """
-    return f"Task #{task.id} marked as done ✅"
+    return SuccessMessages.task_done(task_id=task.id)
 
 
 def format_task_undone(task: Task) -> str:
@@ -169,7 +168,7 @@ def format_task_undone(task: Task) -> str:
     Returns:
         Confirmation message string
     """
-    return f"Task #{task.id} marked as not done ↩️"
+    return SuccessMessages.task_undone(task_id=task.id)
 
 
 def format_tasks_cleared(count: int) -> str:
@@ -181,12 +180,7 @@ def format_tasks_cleared(count: int) -> str:
     Returns:
         Confirmation message string
     """
-    if count == 0:
-        return "No completed tasks to clear."
-    elif count == 1:
-        return "Cleared 1 completed task ✅"
-    else:
-        return f"Cleared {count} completed tasks ✅"
+    return SuccessMessages.tasks_cleared(count=count)
 
 
 def format_task_deleted(task: Task) -> str:
@@ -198,7 +192,7 @@ def format_task_deleted(task: Task) -> str:
     Returns:
         Confirmation message string
     """
-    return f"Task #{task.id} deleted 🗑️"
+    return SuccessMessages.task_deleted(task_id=task.id)
 
 
 def format_task_not_found(task_id: int) -> str:
@@ -210,13 +204,15 @@ def format_task_not_found(task_id: int) -> str:
     Returns:
         Error message string
     """
-    return f"❌ Task #{task_id} not found."
+    from ..messages import ErrorMessages
+
+    return ErrorMessages.task_not_found(task_id=task_id)
 
 
 def format_task_updated(
     task_id: int,
     description: str | None = None,
-    priority: Optional["Priority"] = None,
+    priority: Priority | None = None,
 ) -> str:
     """Format a confirmation message for an updated task.
 
@@ -228,13 +224,9 @@ def format_task_updated(
     Returns:
         Confirmation message string
     """
-    changes = []
-    if description is not None:
-        changes.append(f'description to "{description}"')
-    if priority is not None:
-        changes.append(f"priority to {priority.value}")
-
-    if changes:
-        change_text = " and ".join(changes)
-        return f"Task #{task_id} updated: {change_text} ✏️"
-    return f"Task #{task_id} updated ✏️"
+    priority_str = priority.value if priority is not None else None
+    return SuccessMessages.task_updated(
+        task_id=task_id,
+        description=description,
+        priority=priority_str,
+    )
