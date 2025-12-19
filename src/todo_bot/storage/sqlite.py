@@ -14,12 +14,15 @@ from ..config import (
     CONNECTION_RETRY_DELAY_SECONDS,
     DEFAULT_DB_PATH,
     MAX_CONNECTION_RETRIES,
+    MAX_DESCRIPTION_LENGTH,
+    MIN_DESCRIPTION_LENGTH,
     SCHEMA_VERSION,
 )
 from ..exceptions import (
     StorageConnectionError,
     StorageInitializationError,
     StorageOperationError,
+    ValidationError,
 )
 from ..models.task import Priority, Task
 from .base import TaskStorage
@@ -253,6 +256,39 @@ class SQLiteTaskStorage(TaskStorage):
             user_id=row["user_id"],
         )
 
+    def _validate_description(self, description: str) -> str:
+        """Validate and sanitize a task description.
+
+        This provides defense-in-depth validation at the storage layer,
+        ensuring data integrity even if called from non-cog entry points.
+
+        Args:
+            description: The task description to validate
+
+        Returns:
+            The validated description (stripped of whitespace)
+
+        Raises:
+            ValidationError: If the description is invalid
+        """
+        if not description or not isinstance(description, str):
+            raise ValidationError("Task description is required.")
+
+        stripped = description.strip()
+
+        if len(stripped) < MIN_DESCRIPTION_LENGTH:
+            raise ValidationError(
+                f"Task description must be at least {MIN_DESCRIPTION_LENGTH} character(s)."
+            )
+
+        if len(stripped) > MAX_DESCRIPTION_LENGTH:
+            raise ValidationError(
+                f"Task description too long ({len(stripped)} chars). "
+                f"Maximum is {MAX_DESCRIPTION_LENGTH} characters."
+            )
+
+        return stripped
+
     @with_retry()
     async def add_task(
         self,
@@ -263,7 +299,26 @@ class SQLiteTaskStorage(TaskStorage):
         user_id: int,
         task_date: date | None = None,
     ) -> Task:
-        """Add a new task to the database."""
+        """Add a new task to the database.
+
+        Args:
+            description: Task description (validated for length)
+            priority: Task priority (A, B, or C)
+            server_id: Discord server (guild) ID
+            channel_id: Discord channel ID
+            user_id: Discord user ID
+            task_date: Optional date for the task (defaults to today)
+
+        Returns:
+            The created Task with its assigned ID
+
+        Raises:
+            ValidationError: If the description is invalid
+            StorageOperationError: If the database operation fails
+        """
+        # Validate description at storage layer for defense in depth
+        validated_description = self._validate_description(description)
+
         conn = self._ensure_connected()
         task_date = task_date or date.today()
 
@@ -275,7 +330,7 @@ class SQLiteTaskStorage(TaskStorage):
                 VALUES (?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    description,
+                    validated_description,
                     priority.value,
                     task_date.isoformat(),
                     server_id,
@@ -293,7 +348,7 @@ class SQLiteTaskStorage(TaskStorage):
 
             return Task(
                 id=task_id,
-                description=description,
+                description=validated_description,
                 priority=priority,
                 done=False,
                 task_date=task_date,
@@ -377,35 +432,43 @@ class SQLiteTaskStorage(TaskStorage):
             server_id: Discord server (guild) ID
             channel_id: Discord channel ID
             user_id: Discord user ID
-            description: New description (optional)
+            description: New description (optional, validated for length)
             priority: New priority (optional)
 
         Returns:
             True if the task was found and updated, False otherwise
+
+        Raises:
+            ValidationError: If the description is invalid
         """
         if description is None and priority is None:
             return False  # Nothing to update
 
+        # Validate description at storage layer for defense in depth
+        validated_description = None
+        if description is not None:
+            validated_description = self._validate_description(description)
+
         conn = self._ensure_connected()
 
         # Use explicit query variants to avoid dynamic SQL construction
-        if description is not None and priority is not None:
+        if validated_description is not None and priority is not None:
             cursor = await conn.execute(
                 """
                 UPDATE tasks
                 SET description = ?, priority = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ? AND server_id = ? AND channel_id = ? AND user_id = ?
                 """,
-                (description, priority.value, task_id, server_id, channel_id, user_id),
+                (validated_description, priority.value, task_id, server_id, channel_id, user_id),
             )
-        elif description is not None:
+        elif validated_description is not None:
             cursor = await conn.execute(
                 """
                 UPDATE tasks
                 SET description = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ? AND server_id = ? AND channel_id = ? AND user_id = ?
                 """,
-                (description, task_id, server_id, channel_id, user_id),
+                (validated_description, task_id, server_id, channel_id, user_id),
             )
         else:  # priority is not None
             cursor = await conn.execute(
@@ -621,6 +684,30 @@ class SQLiteTaskStorage(TaskStorage):
         if not incomplete_tasks:
             return 0
 
+        # Batch fetch: Get all existing tasks on the target date in a single query
+        # This eliminates the N+1 query problem
+        cursor = await conn.execute(
+            """
+            SELECT description, priority, server_id, channel_id, user_id
+            FROM tasks
+            WHERE task_date = ?
+            """,
+            (to_date.isoformat(),),
+        )
+        existing_tasks = await cursor.fetchall()
+
+        # Build a set of existing task signatures for O(1) lookup
+        existing_signatures: set[tuple[str, str, int, int, int]] = {
+            (
+                row["description"],
+                row["priority"],
+                row["server_id"],
+                row["channel_id"],
+                row["user_id"],
+            )
+            for row in existing_tasks
+        }
+
         rolled_over_count = 0
 
         for task_row in incomplete_tasks:
@@ -630,25 +717,9 @@ class SQLiteTaskStorage(TaskStorage):
             channel_id = task_row["channel_id"]
             user_id = task_row["user_id"]
 
-            # Check if an identical task already exists on the target date
-            cursor = await conn.execute(
-                """
-                SELECT id FROM tasks
-                WHERE task_date = ? AND description = ? AND priority = ?
-                    AND server_id = ? AND channel_id = ? AND user_id = ?
-                """,
-                (
-                    to_date.isoformat(),
-                    description,
-                    priority,
-                    server_id,
-                    channel_id,
-                    user_id,
-                ),
-            )
-            existing = await cursor.fetchone()
-
-            if existing:
+            # Check if an identical task already exists using set membership
+            task_signature = (description, priority, server_id, channel_id, user_id)
+            if task_signature in existing_signatures:
                 # Skip this task - already exists on target date
                 continue
 

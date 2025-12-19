@@ -358,6 +358,61 @@ class TestRolloverIncompleteTasks:
         assert yesterday_tasks[0].description == "Original task"
         assert yesterday_tasks[0].task_date == yesterday
 
+    @pytest.mark.asyncio
+    async def test_rollover_batch_query_efficiency(self, storage: SQLiteTaskStorage) -> None:
+        """Test that rollover correctly handles multiple tasks efficiently.
+        
+        This test verifies the batch query optimization by creating many 
+        incomplete tasks and checking that rollover works correctly when
+        some already exist on the target date.
+        """
+        yesterday = date.today() - timedelta(days=1)
+        today = date.today()
+        
+        # Create 10 incomplete tasks from yesterday
+        for i in range(10):
+            await storage.add_task(
+                description=f"Task {i}",
+                priority=Priority.A,
+                server_id=123,
+                channel_id=456,
+                user_id=789,
+                task_date=yesterday,
+            )
+        
+        # Pre-create 5 of them on today (simulate partial rollover)
+        for i in range(5):
+            await storage.add_task(
+                description=f"Task {i}",
+                priority=Priority.A,
+                server_id=123,
+                channel_id=456,
+                user_id=789,
+                task_date=today,
+            )
+        
+        # Rollover should only create 5 new tasks (the ones not already on today)
+        count = await storage.rollover_incomplete_tasks(
+            from_date=yesterday,
+            to_date=today,
+        )
+        
+        assert count == 5
+        
+        # Verify all 10 tasks now exist on today
+        today_tasks = await storage.get_tasks(
+            server_id=123,
+            channel_id=456,
+            user_id=789,
+            task_date=today,
+        )
+        assert len(today_tasks) == 10
+        
+        # Verify all descriptions are present
+        descriptions = {t.description for t in today_tasks}
+        for i in range(10):
+            assert f"Task {i}" in descriptions
+
 
 class TestGetAllUserContexts:
     """Tests for the get_all_user_contexts storage method."""

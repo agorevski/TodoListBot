@@ -353,3 +353,171 @@ class TestWithRetryDecorator:
         result = await succeeds()
         assert result == "success"
         assert call_count == 1
+
+
+class TestStorageLayerValidation:
+    """Tests for defense-in-depth validation in the storage layer."""
+
+    @pytest.mark.asyncio
+    async def test_add_task_rejects_empty_description(self, storage):
+        """Test that add_task rejects empty descriptions."""
+        from todo_bot.exceptions import ValidationError
+
+        with pytest.raises(ValidationError, match="description is required"):
+            await storage.add_task(
+                description="",
+                priority=Priority.A,
+                server_id=1,
+                channel_id=1,
+                user_id=1,
+            )
+
+    @pytest.mark.asyncio
+    async def test_add_task_rejects_whitespace_only_description(self, storage):
+        """Test that add_task rejects whitespace-only descriptions."""
+        from todo_bot.exceptions import ValidationError
+
+        with pytest.raises(ValidationError, match="at least 1 character"):
+            await storage.add_task(
+                description="   ",
+                priority=Priority.A,
+                server_id=1,
+                channel_id=1,
+                user_id=1,
+            )
+
+    @pytest.mark.asyncio
+    async def test_add_task_rejects_too_long_description(self, storage):
+        """Test that add_task rejects descriptions exceeding max length."""
+        from todo_bot.config import MAX_DESCRIPTION_LENGTH
+        from todo_bot.exceptions import ValidationError
+
+        long_description = "x" * (MAX_DESCRIPTION_LENGTH + 1)
+        with pytest.raises(ValidationError, match="too long"):
+            await storage.add_task(
+                description=long_description,
+                priority=Priority.A,
+                server_id=1,
+                channel_id=1,
+                user_id=1,
+            )
+
+    @pytest.mark.asyncio
+    async def test_add_task_strips_whitespace(self, storage):
+        """Test that add_task strips leading/trailing whitespace."""
+        task = await storage.add_task(
+            description="  Valid task  ",
+            priority=Priority.A,
+            server_id=1,
+            channel_id=1,
+            user_id=1,
+        )
+
+        assert task.description == "Valid task"
+
+    @pytest.mark.asyncio
+    async def test_add_task_accepts_valid_description(self, storage):
+        """Test that add_task accepts valid descriptions."""
+        task = await storage.add_task(
+            description="Valid task description",
+            priority=Priority.A,
+            server_id=1,
+            channel_id=1,
+            user_id=1,
+        )
+
+        assert task.description == "Valid task description"
+        assert task.id is not None
+
+    @pytest.mark.asyncio
+    async def test_update_task_rejects_empty_description(self, storage):
+        """Test that update_task rejects empty descriptions."""
+        from todo_bot.exceptions import ValidationError
+
+        task = await storage.add_task(
+            description="Original",
+            priority=Priority.A,
+            server_id=1,
+            channel_id=1,
+            user_id=1,
+        )
+
+        with pytest.raises(ValidationError, match="description is required"):
+            await storage.update_task(
+                task_id=task.id,
+                server_id=1,
+                channel_id=1,
+                user_id=1,
+                description="",
+            )
+
+    @pytest.mark.asyncio
+    async def test_update_task_rejects_too_long_description(self, storage):
+        """Test that update_task rejects descriptions exceeding max length."""
+        from todo_bot.config import MAX_DESCRIPTION_LENGTH
+        from todo_bot.exceptions import ValidationError
+
+        task = await storage.add_task(
+            description="Original",
+            priority=Priority.A,
+            server_id=1,
+            channel_id=1,
+            user_id=1,
+        )
+
+        long_description = "x" * (MAX_DESCRIPTION_LENGTH + 1)
+        with pytest.raises(ValidationError, match="too long"):
+            await storage.update_task(
+                task_id=task.id,
+                server_id=1,
+                channel_id=1,
+                user_id=1,
+                description=long_description,
+            )
+
+    @pytest.mark.asyncio
+    async def test_update_task_strips_whitespace(self, storage):
+        """Test that update_task strips leading/trailing whitespace."""
+        task = await storage.add_task(
+            description="Original",
+            priority=Priority.A,
+            server_id=1,
+            channel_id=1,
+            user_id=1,
+        )
+
+        await storage.update_task(
+            task_id=task.id,
+            server_id=1,
+            channel_id=1,
+            user_id=1,
+            description="  Updated task  ",
+        )
+
+        updated = await storage.get_task_by_id(task.id, 1, 1, 1)
+        assert updated.description == "Updated task"
+
+    @pytest.mark.asyncio
+    async def test_update_task_priority_only_skips_description_validation(self, storage):
+        """Test that update_task with only priority skips description validation."""
+        task = await storage.add_task(
+            description="Original",
+            priority=Priority.A,
+            server_id=1,
+            channel_id=1,
+            user_id=1,
+        )
+
+        # Should not raise - no description provided, only priority
+        result = await storage.update_task(
+            task_id=task.id,
+            server_id=1,
+            channel_id=1,
+            user_id=1,
+            priority=Priority.C,
+        )
+
+        assert result is True
+        updated = await storage.get_task_by_id(task.id, 1, 1, 1)
+        assert updated.priority == Priority.C
+        assert updated.description == "Original"
