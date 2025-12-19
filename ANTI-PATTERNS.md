@@ -4,7 +4,7 @@ This document lists development anti-patterns identified in the TodoListBot code
 
 ---
 
-## 2. **Type: ignore Comments Without Explanation**
+## 1. **Type: ignore Comments Without Explanation**
 
 **Location:** `src/todo_bot/views/task_view.py` (line 291)
 
@@ -23,7 +23,7 @@ await interaction.message.edit(  # type: ignore
 
 ---
 
-## 3. **Singleton Pattern with Class-Level Mutable State**
+## 2. **Singleton Pattern with Class-Level Mutable State**
 
 **Location:** `src/todo_bot/main.py` (lines 15-40)
 
@@ -41,39 +41,7 @@ class CleanupManager:
 
 ---
 
-## 4. **Unused Imported Exception Types**
-
-**Location:** `src/todo_bot/exceptions.py`
-
-**Issue:** The `ValidationError` and `ConfigurationError` exceptions are defined but rarely or never used in the actual codebase. Instead, bare `ValueError` is raised in many places.
-
-**Why it's bad:** Defines custom exceptions but doesn't use them consistently, making exception handling less precise.
-
-**Recommendation:** Either use the custom exceptions consistently or remove unused ones.
-
----
-
-## 5. **Magic Numbers in UI Constants**
-
-**Location:** `src/todo_bot/config.py` (lines 11-17)
-
-**Issue:** While constants are defined, they're scattered and some lack clear documentation about their purpose.
-
-```python
-RATE_LIMIT_COMMANDS: Final[int] = 5
-RATE_LIMIT_SECONDS: Final[float] = 10.0
-VIEW_TIMEOUT_SECONDS: Final[float] = 300.0
-MAX_BUTTONS_PER_VIEW: Final[int] = 25
-BUTTONS_PER_ROW: Final[int] = 5
-```
-
-**Why it's bad:** The relationship between constants (e.g., why 5 buttons per row with max 25 total = 5 rows) isn't documented, making it harder to understand Discord's limitations.
-
-**Recommendation:** Add docstrings or comments explaining the rationale (e.g., "Discord limits views to 5 rows × 5 buttons = 25 max").
-
----
-
-## 6. **Inconsistent Error Response Handling**
+## 3. **Inconsistent Error Response Handling**
 
 **Location:** `src/todo_bot/cogs/tasks.py`
 
@@ -96,7 +64,7 @@ await interaction.response.send_message(format_task_added(task), ephemeral=True)
 
 ---
 
-## 7. **Database Connection Not Using Context Manager Consistently**
+## 4. **Database Connection Not Using Context Manager Consistently**
 
 **Location:** `src/todo_bot/storage/sqlite.py`
 
@@ -114,7 +82,7 @@ self.storage = SQLiteTaskStorage(db_path=db_path)
 
 ---
 
-## 8. **No Input Validation in Storage Layer**
+## 5. **No Input Validation in Storage Layer**
 
 **Location:** `src/todo_bot/storage/sqlite.py`
 
@@ -135,7 +103,7 @@ async def add_task(
 
 ---
 
-## 9. **Rollover Task Potential N+1 Query Problem**
+## 6. **Rollover Task Potential N+1 Query Problem**
 
 **Location:** `src/todo_bot/storage/sqlite.py` (lines 586-683)
 
@@ -161,5 +129,5 @@ for task_row in incomplete_tasks:
 |----------|-------|------------|
 | High | 1 | Security (secrets in .env) |
 | Medium | 3 | N+1 queries, unused context managers, missing validation |
-| Low | 5 | Style inconsistencies, missing documentation |
+| Low | 3 | Style inconsistencies |
 

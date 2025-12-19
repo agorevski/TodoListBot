@@ -6,6 +6,7 @@ from datetime import date
 from enum import Enum
 
 from ..config import MAX_DESCRIPTION_LENGTH, MIN_DESCRIPTION_LENGTH
+from ..exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -43,11 +44,11 @@ class Priority(Enum):
             Priority enum value
 
         Raises:
-            ValueError: If the value is not a valid priority
+            ValidationError: If the value is not a valid priority
         """
         value = value.upper().strip()
         if value not in ("A", "B", "C"):
-            raise ValueError(f"Invalid priority: {value}. Must be A, B, or C.")
+            raise ValidationError(f"Invalid priority: {value}. Must be A, B, or C.")
         return cls(value)
 
 
@@ -86,7 +87,7 @@ class Task:
 
         # Validate minimum description length
         if len(self.description) < MIN_DESCRIPTION_LENGTH:
-            raise ValueError(
+            raise ValidationError(
                 f"Task description must be at least "
                 f"{MIN_DESCRIPTION_LENGTH} character(s)."
             )
@@ -94,7 +95,7 @@ class Task:
         # Validate maximum description length
         if len(self.description) > MAX_DESCRIPTION_LENGTH:
             desc_len = len(self.description)
-            raise ValueError(
+            raise ValidationError(
                 f"Task description too long ({desc_len} chars). "
                 f"Maximum is {MAX_DESCRIPTION_LENGTH} characters."
             )

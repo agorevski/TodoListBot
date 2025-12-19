@@ -7,6 +7,7 @@ import pytest
 
 from todo_bot.bot import TodoBot, create_bot, run_bot, setup_logging
 from todo_bot.config import BotConfig
+from todo_bot.exceptions import ConfigurationError
 
 
 class TestTodoBot:
@@ -187,7 +188,7 @@ class TestRunBot:
         with (
             patch.dict("os.environ", {}, clear=True),
             patch("dotenv.load_dotenv"),
-            pytest.raises(ValueError, match="DISCORD_TOKEN"),
+            pytest.raises(ConfigurationError, match="DISCORD_TOKEN"),
         ):
             run_bot()
 

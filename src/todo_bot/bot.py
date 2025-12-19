@@ -171,12 +171,14 @@ def run_bot(token: str | None = None) -> None:
     """
     from dotenv import load_dotenv
 
+    from .exceptions import ConfigurationError
+
     load_dotenv()
 
     # Load configuration from environment
     try:
         config = BotConfig.from_env()
-    except ValueError:
+    except ConfigurationError:
         if token is None:
             raise
         # If token provided directly, create minimal config

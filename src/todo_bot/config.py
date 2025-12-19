@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 from typing import Final
 
+from .exceptions import ConfigurationError
+
 # Task validation constants
 MAX_DESCRIPTION_LENGTH: Final[int] = 500
 MIN_DESCRIPTION_LENGTH: Final[int] = 1
@@ -12,9 +14,13 @@ RATE_LIMIT_COMMANDS: Final[int] = 5
 RATE_LIMIT_SECONDS: Final[float] = 10.0
 
 # View/UI constants
-VIEW_TIMEOUT_SECONDS: Final[float] = 300.0
-MAX_BUTTONS_PER_VIEW: Final[int] = 25
-BUTTONS_PER_ROW: Final[int] = 5
+# Discord limits interactive message components (Views) to:
+# - Maximum 5 action rows per message
+# - Maximum 5 buttons per action row
+# - Therefore: 5 rows × 5 buttons = 25 maximum buttons per view
+VIEW_TIMEOUT_SECONDS: Final[float] = 300.0  # 5 minutes before view expires
+MAX_BUTTONS_PER_VIEW: Final[int] = 25  # Discord limit: 5 rows × 5 buttons
+BUTTONS_PER_ROW: Final[int] = 5  # Discord limit: max 5 buttons per action row
 
 # Database constants
 DEFAULT_DB_PATH: Final[str] = "data/tasks.db"
@@ -56,13 +62,13 @@ class BotConfig:
             BotConfig instance with values from environment
 
         Raises:
-            ValueError: If DISCORD_TOKEN is not set or ROLLOVER_HOUR_UTC is invalid
+            ConfigurationError: If DISCORD_TOKEN is not set or ROLLOVER_HOUR_UTC is invalid
         """
         import os
 
         token = os.getenv("DISCORD_TOKEN")
         if not token:
-            raise ValueError(
+            raise ConfigurationError(
                 "No Discord token provided. "
                 "Set the DISCORD_TOKEN environment variable."
             )
@@ -77,13 +83,11 @@ class BotConfig:
         try:
             rollover_hour = int(rollover_hour_str)
             if not 0 <= rollover_hour <= 23:
-                raise ValueError(
+                raise ConfigurationError(
                     f"ROLLOVER_HOUR_UTC must be between 0 and 23, got {rollover_hour}"
                 )
         except ValueError as e:
-            if "must be between" in str(e):
-                raise
-            raise ValueError(
+            raise ConfigurationError(
                 f"ROLLOVER_HOUR_UTC must be a valid integer, got '{rollover_hour_str}'"
             ) from e
 

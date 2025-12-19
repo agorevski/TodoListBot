@@ -21,6 +21,7 @@ from todo_bot.config import (
     VIEW_TIMEOUT_SECONDS,
     BotConfig,
 )
+from todo_bot.exceptions import ConfigurationError
 
 
 class TestConstants:
@@ -143,7 +144,7 @@ class TestBotConfig:
     def test_bot_config_from_env_no_token_raises(self):
         """Test BotConfig.from_env() raises when DISCORD_TOKEN is missing."""
         with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValueError) as exc_info:
+            with pytest.raises(ConfigurationError) as exc_info:
                 BotConfig.from_env()
 
             assert "No Discord token provided" in str(exc_info.value)
@@ -158,7 +159,7 @@ class TestBotConfig:
             },
             clear=True,
         ):
-            with pytest.raises(ValueError) as exc_info:
+            with pytest.raises(ConfigurationError) as exc_info:
                 BotConfig.from_env()
 
             assert "must be between 0 and 23" in str(exc_info.value)
@@ -173,7 +174,7 @@ class TestBotConfig:
             },
             clear=True,
         ):
-            with pytest.raises(ValueError) as exc_info:
+            with pytest.raises(ConfigurationError) as exc_info:
                 BotConfig.from_env()
 
             assert "must be a valid integer" in str(exc_info.value)

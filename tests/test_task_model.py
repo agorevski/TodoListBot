@@ -4,6 +4,7 @@ from datetime import date, timedelta
 
 import pytest
 
+from todo_bot.exceptions import ValidationError
 from todo_bot.models.task import MAX_DESCRIPTION_LENGTH, Priority, Task
 
 
@@ -46,14 +47,14 @@ class TestPriority:
         assert Priority.from_string("\tB\n") == Priority.B
 
     def test_priority_from_string_invalid(self) -> None:
-        """Test that invalid priority strings raise ValueError."""
-        with pytest.raises(ValueError, match="Invalid priority"):
+        """Test that invalid priority strings raise ValidationError."""
+        with pytest.raises(ValidationError, match="Invalid priority"):
             Priority.from_string("D")
 
-        with pytest.raises(ValueError, match="Invalid priority"):
+        with pytest.raises(ValidationError, match="Invalid priority"):
             Priority.from_string("")
 
-        with pytest.raises(ValueError, match="Invalid priority"):
+        with pytest.raises(ValidationError, match="Invalid priority"):
             Priority.from_string("invalid")
 
 
@@ -120,8 +121,8 @@ class TestTask:
         assert task.description == "Test task with spaces"
 
     def test_task_empty_description_raises(self) -> None:
-        """Test that empty description raises ValueError."""
-        with pytest.raises(ValueError, match="at least 1 character"):
+        """Test that empty description raises ValidationError."""
+        with pytest.raises(ValidationError, match="at least 1 character"):
             Task(
                 id=1,
                 description="",
@@ -132,8 +133,8 @@ class TestTask:
             )
 
     def test_task_whitespace_description_raises(self) -> None:
-        """Test that whitespace-only description raises ValueError."""
-        with pytest.raises(ValueError, match="at least 1 character"):
+        """Test that whitespace-only description raises ValidationError."""
+        with pytest.raises(ValidationError, match="at least 1 character"):
             Task(
                 id=1,
                 description="   ",
@@ -157,9 +158,9 @@ class TestTask:
         assert len(task.description) == MAX_DESCRIPTION_LENGTH
 
     def test_task_description_too_long_raises(self) -> None:
-        """Test that description exceeding max length raises ValueError."""
+        """Test that description exceeding max length raises ValidationError."""
         long_desc = "x" * (MAX_DESCRIPTION_LENGTH + 1)
-        with pytest.raises(ValueError, match="too long"):
+        with pytest.raises(ValidationError, match="too long"):
             Task(
                 id=1,
                 description=long_desc,

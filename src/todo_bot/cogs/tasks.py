@@ -13,7 +13,7 @@ from ..config import (
     RATE_LIMIT_COMMANDS,
     RATE_LIMIT_SECONDS,
 )
-from ..exceptions import StorageError
+from ..exceptions import StorageError, ValidationError
 from ..messages import ErrorMessages
 from ..models.task import Priority
 from ..storage.base import TaskStorage
@@ -109,7 +109,7 @@ class TasksCog(commands.Cog):
 
         try:
             task_priority = Priority.from_string(priority)
-        except ValueError as e:
+        except ValidationError as e:
             await interaction.response.send_message(
                 f"❌ {e}",
                 ephemeral=True,
@@ -337,7 +337,7 @@ class TasksCog(commands.Cog):
         if priority:
             try:
                 task_priority = Priority.from_string(priority)
-            except ValueError as e:
+            except ValidationError as e:
                 await interaction.response.send_message(
                     f"❌ {e}",
                     ephemeral=True,
