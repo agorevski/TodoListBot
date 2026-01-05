@@ -40,7 +40,15 @@ class ErrorMessages:
 
     @classmethod
     def description_too_long(cls, length: int, max_length: int) -> str:
-        """Format description too long error."""
+        """Format description too long error.
+
+        Args:
+            length: The actual length of the description.
+            max_length: The maximum allowed length.
+
+        Returns:
+            Formatted error message indicating the description is too long.
+        """
         return cls.DESCRIPTION_TOO_LONG.format(
             length=length,
             max_length=max_length,
@@ -48,22 +56,50 @@ class ErrorMessages:
 
     @classmethod
     def description_too_short(cls, min_length: int) -> str:
-        """Format description too short error."""
+        """Format description too short error.
+
+        Args:
+            min_length: The minimum required length.
+
+        Returns:
+            Formatted error message indicating the description is too short.
+        """
         return cls.DESCRIPTION_TOO_SHORT.format(min_length=min_length)
 
     @classmethod
     def invalid_priority(cls, priority: str) -> str:
-        """Format invalid priority error."""
+        """Format invalid priority error.
+
+        Args:
+            priority: The invalid priority value provided.
+
+        Returns:
+            Formatted error message indicating the priority is invalid.
+        """
         return cls.INVALID_PRIORITY.format(priority=priority)
 
     @classmethod
     def task_not_found(cls, task_id: int) -> str:
-        """Format task not found error."""
+        """Format task not found error.
+
+        Args:
+            task_id: The ID of the task that was not found.
+
+        Returns:
+            Formatted error message indicating the task was not found.
+        """
         return cls.TASK_NOT_FOUND.format(task_id=task_id)
 
     @classmethod
     def rate_limited(cls, retry_after: float) -> str:
-        """Format rate limited message."""
+        """Format rate limited message.
+
+        Args:
+            retry_after: The number of seconds to wait before retrying.
+
+        Returns:
+            Formatted message indicating the user is rate limited.
+        """
         return cls.RATE_LIMITED.format(retry_after=retry_after)
 
 
@@ -88,22 +124,51 @@ class SuccessMessages:
 
     @classmethod
     def task_added(cls, task_id: int, description: str) -> str:
-        """Format task added message."""
+        """Format task added message.
+
+        Args:
+            task_id: The ID of the newly created task.
+            description: The description of the task.
+
+        Returns:
+            Formatted success message for task creation.
+        """
         return cls.TASK_ADDED.format(task_id=task_id, description=description)
 
     @classmethod
     def task_done(cls, task_id: int) -> str:
-        """Format task done message."""
+        """Format task done message.
+
+        Args:
+            task_id: The ID of the task marked as done.
+
+        Returns:
+            Formatted success message for task completion.
+        """
         return cls.TASK_DONE.format(task_id=task_id)
 
     @classmethod
     def task_undone(cls, task_id: int) -> str:
-        """Format task undone message."""
+        """Format task undone message.
+
+        Args:
+            task_id: The ID of the task marked as not done.
+
+        Returns:
+            Formatted success message for task un-completion.
+        """
         return cls.TASK_UNDONE.format(task_id=task_id)
 
     @classmethod
     def task_deleted(cls, task_id: int) -> str:
-        """Format task deleted message."""
+        """Format task deleted message.
+
+        Args:
+            task_id: The ID of the deleted task.
+
+        Returns:
+            Formatted success message for task deletion.
+        """
         return cls.TASK_DELETED.format(task_id=task_id)
 
     @classmethod
@@ -113,7 +178,16 @@ class SuccessMessages:
         description: str | None = None,
         priority: str | None = None,
     ) -> str:
-        """Format task updated message."""
+        """Format task updated message.
+
+        Args:
+            task_id: The ID of the updated task.
+            description: The new description, if changed.
+            priority: The new priority, if changed.
+
+        Returns:
+            Formatted success message describing what was updated.
+        """
         changes = []
         if description is not None:
             changes.append(f'description to "{description}"')
@@ -127,7 +201,14 @@ class SuccessMessages:
 
     @classmethod
     def tasks_cleared(cls, count: int) -> str:
-        """Format tasks cleared message."""
+        """Format tasks cleared message.
+
+        Args:
+            count: The number of completed tasks that were cleared.
+
+        Returns:
+            Formatted message indicating how many tasks were cleared.
+        """
         if count == 0:
             return cls.TASKS_CLEARED_NONE
         elif count == 1:
@@ -152,7 +233,15 @@ class DisplayMessages:
 
     @classmethod
     def header(cls, task_date: str | None = None, is_today: bool = True) -> str:
-        """Format task list header."""
+        """Format task list header.
+
+        Args:
+            task_date: The date string to display in the header.
+            is_today: Whether the task list is for today.
+
+        Returns:
+            Formatted header string for the task list.
+        """
         if is_today:
             return cls.HEADER_TODAY
         return cls.HEADER_DATE.format(date=task_date)
@@ -163,7 +252,15 @@ class DisplayMessages:
         task_date: str | None = None,
         is_today: bool = True,
     ) -> str:
-        """Format empty task list message."""
+        """Format empty task list message.
+
+        Args:
+            task_date: The date string for when the list is empty.
+            is_today: Whether the task list is for today.
+
+        Returns:
+            Formatted message indicating no tasks exist.
+        """
         if is_today:
             return cls.EMPTY_TODAY
         return cls.EMPTY_DATE.format(date=task_date)

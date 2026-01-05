@@ -75,6 +75,11 @@ def reset_cleanup_manager() -> None:
     """Reset the singleton CleanupManager (for testing).
 
     This allows tests to start with a fresh CleanupManager instance.
+    The global singleton is set to None, so the next call to
+    get_cleanup_manager() will create a new instance.
+
+    Returns:
+        None
     """
     global _cleanup_manager_instance
     with _cleanup_manager_lock:
@@ -142,13 +147,25 @@ def register_cleanup() -> None:
     """Register atexit handler for final cleanup logging.
 
     This ensures that even if an unexpected exit occurs,
-    we log that the bot is shutting down.
+    we log that the bot is shutting down. Delegates to the
+    singleton CleanupManager instance.
+
+    Returns:
+        None
     """
     get_cleanup_manager().register()
 
 
 def main() -> None:
-    """Run the Discord A/B/C Todo Bot."""
+    """Run the Discord A/B/C Todo Bot.
+
+    This is the main entry point for the application. It sets up
+    signal handlers for graceful shutdown, registers cleanup handlers,
+    and starts the bot.
+
+    Returns:
+        None
+    """
     setup_signal_handlers()
     register_cleanup()
     run_bot()

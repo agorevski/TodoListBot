@@ -13,7 +13,12 @@ from todo_bot.storage.sqlite import SQLiteTaskStorage
 
 @pytest_asyncio.fixture
 async def storage():
-    """Create a temporary SQLite storage for testing."""
+    """Create a temporary SQLite storage for testing.
+
+    Yields:
+        SQLiteTaskStorage: An initialized storage instance backed by a
+            temporary database that is automatically cleaned up after the test.
+    """
     with tempfile.TemporaryDirectory() as tmpdir:
         db_path = os.path.join(tmpdir, "test_tasks.db")
         storage = SQLiteTaskStorage(db_path=db_path)
@@ -27,7 +32,14 @@ class TestUpdateTask:
 
     @pytest.mark.asyncio
     async def test_update_task_description(self, storage):
-        """Test updating task description."""
+        """Test updating task description.
+
+        Args:
+            storage: The SQLiteTaskStorage fixture instance.
+
+        Verifies that updating only the description field works correctly
+        while preserving other task attributes like priority.
+        """
         task = await storage.add_task(
             description="Original",
             priority=Priority.A,
@@ -51,7 +63,13 @@ class TestUpdateTask:
 
     @pytest.mark.asyncio
     async def test_update_task_priority(self, storage):
-        """Test updating task priority."""
+        """Test updating task priority.
+
+        Args:
+            storage: The SQLiteTaskStorage fixture instance.
+
+        Verifies that updating only the priority field works correctly.
+        """
         task = await storage.add_task(
             description="Test",
             priority=Priority.C,
@@ -74,7 +92,14 @@ class TestUpdateTask:
 
     @pytest.mark.asyncio
     async def test_update_task_both(self, storage):
-        """Test updating both description and priority."""
+        """Test updating both description and priority.
+
+        Args:
+            storage: The SQLiteTaskStorage fixture instance.
+
+        Verifies that both description and priority can be updated
+        simultaneously in a single update_task call.
+        """
         task = await storage.add_task(
             description="Original",
             priority=Priority.C,
@@ -99,7 +124,14 @@ class TestUpdateTask:
 
     @pytest.mark.asyncio
     async def test_update_task_nothing(self, storage):
-        """Test update with no changes returns False."""
+        """Test update with no changes returns False.
+
+        Args:
+            storage: The SQLiteTaskStorage fixture instance.
+
+        Verifies that calling update_task without providing any fields
+        to update returns False to indicate no changes were made.
+        """
         task = await storage.add_task(
             description="Test",
             priority=Priority.A,
@@ -119,7 +151,14 @@ class TestUpdateTask:
 
     @pytest.mark.asyncio
     async def test_update_task_not_found(self, storage):
-        """Test update non-existent task returns False."""
+        """Test update non-existent task returns False.
+
+        Args:
+            storage: The SQLiteTaskStorage fixture instance.
+
+        Verifies that attempting to update a task that doesn't exist
+        returns False rather than raising an exception.
+        """
         result = await storage.update_task(
             task_id=9999,
             server_id=1,
@@ -136,7 +175,14 @@ class TestCleanupOldTasks:
 
     @pytest.mark.asyncio
     async def test_cleanup_old_tasks(self, storage):
-        """Test cleanup removes old tasks."""
+        """Test cleanup removes old tasks.
+
+        Args:
+            storage: The SQLiteTaskStorage fixture instance.
+
+        Verifies that cleanup_old_tasks removes tasks older than the
+        specified retention period while preserving recent and current tasks.
+        """
         old_date = date.today() - timedelta(days=10)
         recent_date = date.today() - timedelta(days=2)
 
@@ -185,7 +231,14 @@ class TestCleanupOldTasks:
 
     @pytest.mark.asyncio
     async def test_cleanup_disabled(self, storage):
-        """Test cleanup with 0 days returns 0."""
+        """Test cleanup with 0 days returns 0.
+
+        Args:
+            storage: The SQLiteTaskStorage fixture instance.
+
+        Verifies that cleanup is effectively disabled when retention_days
+        is set to 0, returning 0 deleted tasks.
+        """
         await storage.add_task(
             description="Test",
             priority=Priority.A,
@@ -201,7 +254,14 @@ class TestCleanupOldTasks:
 
     @pytest.mark.asyncio
     async def test_cleanup_negative(self, storage):
-        """Test cleanup with negative days returns 0."""
+        """Test cleanup with negative days returns 0.
+
+        Args:
+            storage: The SQLiteTaskStorage fixture instance.
+
+        Verifies that cleanup handles negative retention_days gracefully
+        by returning 0 without deleting any tasks.
+        """
         count = await storage.cleanup_old_tasks(retention_days=-5)
         assert count == 0
 
@@ -211,7 +271,14 @@ class TestGetStats:
 
     @pytest.mark.asyncio
     async def test_get_stats_empty(self, storage):
-        """Test stats on empty database."""
+        """Test stats on empty database.
+
+        Args:
+            storage: The SQLiteTaskStorage fixture instance.
+
+        Verifies that get_stats returns correct default values when
+        the database contains no tasks.
+        """
         stats = await storage.get_stats()
 
         assert stats["total_tasks"] == 0
@@ -221,7 +288,14 @@ class TestGetStats:
 
     @pytest.mark.asyncio
     async def test_get_stats_with_data(self, storage):
-        """Test stats with tasks."""
+        """Test stats with tasks.
+
+        Args:
+            storage: The SQLiteTaskStorage fixture instance.
+
+        Verifies that get_stats correctly counts total tasks and
+        unique users when tasks exist in the database.
+        """
         # Add tasks from different users
         await storage.add_task(
             description="Task 1",
@@ -257,7 +331,11 @@ class TestMigrations:
 
     @pytest.mark.asyncio
     async def test_initialize_creates_schema_version(self):
-        """Test initialize creates schema_version table."""
+        """Test initialize creates schema_version table.
+
+        Verifies that initializing a new database creates the
+        schema_version table with the current schema version.
+        """
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "test.db")
             storage = SQLiteTaskStorage(db_path=db_path)
@@ -271,7 +349,11 @@ class TestMigrations:
 
     @pytest.mark.asyncio
     async def test_reinitialize_same_version(self):
-        """Test re-initializing doesn't break existing data."""
+        """Test re-initializing doesn't break existing data.
+
+        Verifies that closing and re-opening a storage instance
+        preserves existing task data across initialization cycles.
+        """
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "test.db")
 
@@ -297,7 +379,12 @@ class TestWithRetryDecorator:
 
     @pytest.mark.asyncio
     async def test_retry_on_transient_failure(self):
-        """Test retry decorator retries on transient failures."""
+        """Test retry decorator retries on transient failures.
+
+        Verifies that the with_retry decorator automatically retries
+        operations that fail with transient aiosqlite errors until
+        they eventually succeed.
+        """
         import aiosqlite
 
         from todo_bot.storage.sqlite import with_retry
@@ -318,7 +405,12 @@ class TestWithRetryDecorator:
 
     @pytest.mark.asyncio
     async def test_retry_exhausted(self):
-        """Test retry decorator raises after max retries."""
+        """Test retry decorator raises after max retries.
+
+        Verifies that when all retry attempts are exhausted, the
+        decorator raises a StorageOperationError wrapping the
+        original failure.
+        """
         import aiosqlite
 
         from todo_bot.exceptions import StorageOperationError  # noqa: F401
@@ -339,7 +431,11 @@ class TestWithRetryDecorator:
 
     @pytest.mark.asyncio
     async def test_retry_success_first_try(self):
-        """Test retry decorator succeeds on first try."""
+        """Test retry decorator succeeds on first try.
+
+        Verifies that the with_retry decorator does not interfere
+        with operations that succeed immediately on the first attempt.
+        """
         from todo_bot.storage.sqlite import with_retry
 
         call_count = 0
@@ -360,7 +456,14 @@ class TestStorageLayerValidation:
 
     @pytest.mark.asyncio
     async def test_add_task_rejects_empty_description(self, storage):
-        """Test that add_task rejects empty descriptions."""
+        """Test that add_task rejects empty descriptions.
+
+        Args:
+            storage: The SQLiteTaskStorage fixture instance.
+
+        Verifies that the storage layer validates descriptions and
+        raises ValidationError for empty strings.
+        """
         from todo_bot.exceptions import ValidationError
 
         with pytest.raises(ValidationError, match="description is required"):
@@ -374,7 +477,14 @@ class TestStorageLayerValidation:
 
     @pytest.mark.asyncio
     async def test_add_task_rejects_whitespace_only_description(self, storage):
-        """Test that add_task rejects whitespace-only descriptions."""
+        """Test that add_task rejects whitespace-only descriptions.
+
+        Args:
+            storage: The SQLiteTaskStorage fixture instance.
+
+        Verifies that descriptions containing only whitespace are
+        rejected after stripping, as they would be effectively empty.
+        """
         from todo_bot.exceptions import ValidationError
 
         with pytest.raises(ValidationError, match="at least 1 character"):
@@ -388,7 +498,14 @@ class TestStorageLayerValidation:
 
     @pytest.mark.asyncio
     async def test_add_task_rejects_too_long_description(self, storage):
-        """Test that add_task rejects descriptions exceeding max length."""
+        """Test that add_task rejects descriptions exceeding max length.
+
+        Args:
+            storage: The SQLiteTaskStorage fixture instance.
+
+        Verifies that descriptions longer than MAX_DESCRIPTION_LENGTH
+        are rejected with a ValidationError.
+        """
         from todo_bot.config import MAX_DESCRIPTION_LENGTH
         from todo_bot.exceptions import ValidationError
 
@@ -404,7 +521,14 @@ class TestStorageLayerValidation:
 
     @pytest.mark.asyncio
     async def test_add_task_strips_whitespace(self, storage):
-        """Test that add_task strips leading/trailing whitespace."""
+        """Test that add_task strips leading/trailing whitespace.
+
+        Args:
+            storage: The SQLiteTaskStorage fixture instance.
+
+        Verifies that whitespace is stripped from descriptions before
+        storage, ensuring clean data.
+        """
         task = await storage.add_task(
             description="  Valid task  ",
             priority=Priority.A,
@@ -417,7 +541,14 @@ class TestStorageLayerValidation:
 
     @pytest.mark.asyncio
     async def test_add_task_accepts_valid_description(self, storage):
-        """Test that add_task accepts valid descriptions."""
+        """Test that add_task accepts valid descriptions.
+
+        Args:
+            storage: The SQLiteTaskStorage fixture instance.
+
+        Verifies that valid descriptions are accepted and the task
+        is created with the correct attributes.
+        """
         task = await storage.add_task(
             description="Valid task description",
             priority=Priority.A,
@@ -431,7 +562,14 @@ class TestStorageLayerValidation:
 
     @pytest.mark.asyncio
     async def test_update_task_rejects_empty_description(self, storage):
-        """Test that update_task rejects empty descriptions."""
+        """Test that update_task rejects empty descriptions.
+
+        Args:
+            storage: The SQLiteTaskStorage fixture instance.
+
+        Verifies that update_task validates the new description and
+        raises ValidationError for empty strings.
+        """
         from todo_bot.exceptions import ValidationError
 
         task = await storage.add_task(
@@ -453,7 +591,14 @@ class TestStorageLayerValidation:
 
     @pytest.mark.asyncio
     async def test_update_task_rejects_too_long_description(self, storage):
-        """Test that update_task rejects descriptions exceeding max length."""
+        """Test that update_task rejects descriptions exceeding max length.
+
+        Args:
+            storage: The SQLiteTaskStorage fixture instance.
+
+        Verifies that update_task validates description length and
+        raises ValidationError when it exceeds MAX_DESCRIPTION_LENGTH.
+        """
         from todo_bot.config import MAX_DESCRIPTION_LENGTH
         from todo_bot.exceptions import ValidationError
 
@@ -477,7 +622,14 @@ class TestStorageLayerValidation:
 
     @pytest.mark.asyncio
     async def test_update_task_strips_whitespace(self, storage):
-        """Test that update_task strips leading/trailing whitespace."""
+        """Test that update_task strips leading/trailing whitespace.
+
+        Args:
+            storage: The SQLiteTaskStorage fixture instance.
+
+        Verifies that whitespace is stripped from updated descriptions
+        before storage.
+        """
         task = await storage.add_task(
             description="Original",
             priority=Priority.A,
@@ -499,7 +651,15 @@ class TestStorageLayerValidation:
 
     @pytest.mark.asyncio
     async def test_update_task_priority_only_skips_description_validation(self, storage):
-        """Test that update_task with only priority skips description validation."""
+        """Test that update_task with only priority skips description validation.
+
+        Args:
+            storage: The SQLiteTaskStorage fixture instance.
+
+        Verifies that when only updating priority (no description provided),
+        description validation is skipped and the original description is
+        preserved.
+        """
         task = await storage.add_task(
             description="Original",
             priority=Priority.A,

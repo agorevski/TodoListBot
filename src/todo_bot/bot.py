@@ -62,7 +62,11 @@ class TodoBot(commands.Bot):
 
     @property
     def config(self) -> BotConfig | None:
-        """Get the bot configuration."""
+        """Get the bot configuration.
+
+        Returns:
+            The bot configuration if set, otherwise None.
+        """
         return self._config
 
     async def setup_hook(self) -> None:

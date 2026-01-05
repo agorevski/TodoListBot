@@ -58,11 +58,32 @@ class BotConfig:
     def from_env(cls) -> "BotConfig":
         """Create a BotConfig from environment variables.
 
+        Reads configuration values from environment variables and constructs
+        a BotConfig instance. Uses default values for any unset optional
+        environment variables.
+
+        Environment Variables:
+            DISCORD_TOKEN: Required. The Discord bot token for authentication.
+            DATABASE_PATH: Optional. Path to the SQLite database file.
+                Defaults to "data/tasks.db".
+            LOG_LEVEL: Optional. Logging level (DEBUG, INFO, WARNING, ERROR).
+                Defaults to "INFO".
+            SYNC_COMMANDS_GLOBALLY: Optional. Whether to sync slash commands
+                globally. Defaults to "true".
+            RETENTION_DAYS: Optional. Number of days to retain completed tasks.
+                Defaults to 0 (disabled).
+            ENABLE_AUTO_ROLLOVER: Optional. Whether to enable automatic task
+                rollover. Defaults to "true".
+            ROLLOVER_HOUR_UTC: Optional. Hour (0-23) in UTC for daily rollover.
+                Defaults to 0 (midnight UTC).
+
         Returns:
-            BotConfig instance with values from environment
+            BotConfig: A new BotConfig instance populated with values from
+                environment variables.
 
         Raises:
-            ConfigurationError: If DISCORD_TOKEN is not set or ROLLOVER_HOUR_UTC is invalid
+            ConfigurationError: If DISCORD_TOKEN is not set or if
+                ROLLOVER_HOUR_UTC is not a valid integer between 0 and 23.
         """
         import os
 

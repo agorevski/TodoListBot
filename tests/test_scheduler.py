@@ -19,17 +19,30 @@ class TestSecondsUntilNextRolloverHour:
     """Tests for seconds_until_next_rollover_hour function."""
 
     def test_returns_positive_value(self) -> None:
-        """Should return a positive number of seconds."""
+        """Test that seconds_until_next_rollover_hour returns a positive value.
+
+        Verifies that the function always returns a positive number of seconds
+        until the next rollover hour.
+        """
         seconds = seconds_until_next_rollover_hour()
         assert seconds > 0
 
     def test_returns_less_than_24_hours(self) -> None:
-        """Should return less than 24 hours worth of seconds."""
+        """Test that seconds_until_next_rollover_hour returns less than 24 hours.
+
+        Verifies that the function never returns more than 24 hours worth
+        of seconds since rollover occurs daily.
+        """
         seconds = seconds_until_next_rollover_hour()
         assert seconds < 24 * 60 * 60
 
     def test_at_midnight_returns_about_24_hours(self) -> None:
-        """At exactly midnight, should return about 24 hours for midnight rollover."""
+        """Test that at midnight, function returns approximately 24 hours.
+
+        When called at exactly midnight UTC with a midnight rollover hour,
+        the function should return approximately 24 hours until the next
+        rollover.
+        """
         # Mock datetime.now to return exactly midnight
         mock_now = datetime(2024, 12, 15, 0, 0, 0, tzinfo=timezone.utc)
         with patch("todo_bot.scheduler.datetime") as mock_datetime:
@@ -41,7 +54,11 @@ class TestSecondsUntilNextRolloverHour:
             assert 23 * 3600 < seconds <= 24 * 3600
 
     def test_at_noon_returns_about_12_hours(self) -> None:
-        """At noon UTC, should return about 12 hours for midnight rollover."""
+        """Test that at noon UTC, function returns approximately 12 hours.
+
+        When called at noon UTC with a midnight rollover hour, the function
+        should return approximately 12 hours until the next rollover.
+        """
         mock_now = datetime(2024, 12, 15, 12, 0, 0, tzinfo=timezone.utc)
         with patch("todo_bot.scheduler.datetime") as mock_datetime:
             mock_datetime.now.return_value = mock_now
@@ -52,7 +69,11 @@ class TestSecondsUntilNextRolloverHour:
             assert 11 * 3600 < seconds <= 12 * 3600
 
     def test_custom_rollover_hour(self) -> None:
-        """Should work with custom rollover hour."""
+        """Test that function works correctly with a custom rollover hour.
+
+        When called at 10:00 UTC with a rollover hour of 14:00, the function
+        should return approximately 4 hours until the next rollover.
+        """
         # At 10:00 UTC, if rollover is at 14:00, should be about 4 hours
         mock_now = datetime(2024, 12, 15, 10, 0, 0, tzinfo=timezone.utc)
         with patch("todo_bot.scheduler.datetime") as mock_datetime:
@@ -64,7 +85,11 @@ class TestSecondsUntilNextRolloverHour:
             assert 3 * 3600 < seconds <= 4 * 3600
 
     def test_rollover_hour_passed_today(self) -> None:
-        """Should return time until tomorrow's rollover if hour already passed."""
+        """Test that function returns time until tomorrow when rollover hour passed.
+
+        When called at 16:00 UTC with a rollover hour of 14:00, the function
+        should return approximately 22 hours until tomorrow's rollover.
+        """
         # At 16:00 UTC, if rollover is at 14:00, should be about 22 hours
         mock_now = datetime(2024, 12, 15, 16, 0, 0, tzinfo=timezone.utc)
         with patch("todo_bot.scheduler.datetime") as mock_datetime:
@@ -80,14 +105,22 @@ class TestGetYesterdayAndToday:
     """Tests for get_yesterday_and_today function."""
 
     def test_returns_correct_dates(self) -> None:
-        """Should return yesterday and today as a tuple."""
+        """Test that get_yesterday_and_today returns correct date values.
+
+        Verifies that the function returns today's date and yesterday's date
+        as a tuple in the correct order.
+        """
         yesterday, today = get_yesterday_and_today()
         
         assert today == date.today()
         assert yesterday == date.today() - timedelta(days=1)
 
     def test_returns_tuple_of_dates(self) -> None:
-        """Should return a tuple of two date objects."""
+        """Test that get_yesterday_and_today returns a tuple of date objects.
+
+        Verifies that the function returns a tuple containing exactly two
+        date objects.
+        """
         result = get_yesterday_and_today()
         
         assert isinstance(result, tuple)
@@ -96,7 +129,11 @@ class TestGetYesterdayAndToday:
         assert isinstance(result[1], date)
 
     def test_yesterday_is_before_today(self) -> None:
-        """Yesterday should be one day before today."""
+        """Test that yesterday is exactly one day before today.
+
+        Verifies that the returned yesterday date is less than today
+        and the difference is exactly one day.
+        """
         yesterday, today = get_yesterday_and_today()
         
         assert yesterday < today
@@ -108,43 +145,80 @@ class TestRolloverScheduler:
 
     @pytest.fixture
     def mock_bot(self) -> MagicMock:
-        """Create a mock bot."""
+        """Create a mock Discord bot for testing.
+
+        Returns:
+            MagicMock: A mock bot instance with wait_until_ready configured
+                as an async mock.
+        """
         bot = MagicMock()
         bot.wait_until_ready = AsyncMock()
         return bot
 
     @pytest.fixture
     def mock_storage(self) -> MagicMock:
-        """Create a mock storage."""
+        """Create a mock storage backend for testing.
+
+        Returns:
+            MagicMock: A mock storage instance with rollover_incomplete_tasks
+                configured as an async mock returning 0.
+        """
         storage = MagicMock()
         storage.rollover_incomplete_tasks = AsyncMock(return_value=0)
         return storage
 
     @pytest.fixture
     def scheduler(self, mock_bot: MagicMock, mock_storage: MagicMock) -> RolloverScheduler:
-        """Create a RolloverScheduler instance."""
+        """Create a RolloverScheduler instance for testing.
+
+        Args:
+            mock_bot: The mock Discord bot fixture.
+            mock_storage: The mock storage backend fixture.
+
+        Returns:
+            RolloverScheduler: A scheduler instance configured with mocks.
+        """
         return RolloverScheduler(mock_bot, mock_storage)
 
     def test_init(self, scheduler: RolloverScheduler, mock_bot: MagicMock, mock_storage: MagicMock) -> None:
-        """Should initialize with bot and storage."""
+        """Test RolloverScheduler initialization with default values.
+
+        Args:
+            scheduler: The scheduler fixture.
+            mock_bot: The mock bot fixture.
+            mock_storage: The mock storage fixture.
+        """
         assert scheduler.bot is mock_bot
         assert scheduler.storage is mock_storage
         assert scheduler.rollover_hour == 0  # Default
         assert scheduler._last_rollover_date is None
 
     def test_init_with_custom_rollover_hour(self, mock_bot: MagicMock, mock_storage: MagicMock) -> None:
-        """Should accept custom rollover hour."""
+        """Test RolloverScheduler initialization with custom rollover hour.
+
+        Args:
+            mock_bot: The mock bot fixture.
+            mock_storage: The mock storage fixture.
+        """
         scheduler = RolloverScheduler(mock_bot, mock_storage, rollover_hour=14)
         assert scheduler.rollover_hour == 14
 
     def test_cog_load_starts_task(self, scheduler: RolloverScheduler) -> None:
-        """cog_load should start the midnight rollover task."""
+        """Test that cog_load starts the midnight rollover background task.
+
+        Args:
+            scheduler: The scheduler fixture.
+        """
         with patch.object(scheduler.midnight_rollover_task, "start") as mock_start:
             scheduler.cog_load()
             mock_start.assert_called_once()
 
     def test_cog_unload_cancels_task(self, scheduler: RolloverScheduler) -> None:
-        """cog_unload should cancel the midnight rollover task."""
+        """Test that cog_unload cancels the midnight rollover background task.
+
+        Args:
+            scheduler: The scheduler fixture.
+        """
         with patch.object(scheduler.midnight_rollover_task, "cancel") as mock_cancel:
             scheduler.cog_unload()
             mock_cancel.assert_called_once()
@@ -153,7 +227,15 @@ class TestRolloverScheduler:
     async def test_midnight_rollover_task_calls_storage(
         self, scheduler: RolloverScheduler, mock_storage: MagicMock
     ) -> None:
-        """midnight_rollover_task should call storage.rollover_incomplete_tasks."""
+        """Test that midnight_rollover_task calls storage rollover method.
+
+        Verifies that the task calls rollover_incomplete_tasks with correct
+        date parameters (yesterday and today).
+
+        Args:
+            scheduler: The scheduler fixture.
+            mock_storage: The mock storage fixture.
+        """
         mock_storage.rollover_incomplete_tasks.return_value = 5
         
         await scheduler.midnight_rollover_task()
@@ -168,7 +250,15 @@ class TestRolloverScheduler:
     async def test_midnight_rollover_task_sets_last_rollover_date(
         self, scheduler: RolloverScheduler, mock_storage: MagicMock
     ) -> None:
-        """midnight_rollover_task should update _last_rollover_date."""
+        """Test that midnight_rollover_task updates the last rollover date.
+
+        Verifies that after a successful rollover, the _last_rollover_date
+        attribute is set to today's date.
+
+        Args:
+            scheduler: The scheduler fixture.
+            mock_storage: The mock storage fixture.
+        """
         assert scheduler._last_rollover_date is None
         
         await scheduler.midnight_rollover_task()
@@ -179,7 +269,15 @@ class TestRolloverScheduler:
     async def test_midnight_rollover_task_skips_if_already_done_today(
         self, scheduler: RolloverScheduler, mock_storage: MagicMock
     ) -> None:
-        """Should skip rollover if already performed today."""
+        """Test that midnight_rollover_task skips if already run today.
+
+        Verifies that the task does not call storage when rollover was
+        already performed on the current date.
+
+        Args:
+            scheduler: The scheduler fixture.
+            mock_storage: The mock storage fixture.
+        """
         scheduler._last_rollover_date = date.today()
         
         await scheduler.midnight_rollover_task()
@@ -191,7 +289,15 @@ class TestRolloverScheduler:
     async def test_midnight_rollover_task_handles_exception(
         self, scheduler: RolloverScheduler, mock_storage: MagicMock
     ) -> None:
-        """Should handle storage exceptions gracefully."""
+        """Test that midnight_rollover_task handles storage exceptions gracefully.
+
+        Verifies that when a StorageError is raised, the task does not
+        propagate the exception and does not update the last rollover date.
+
+        Args:
+            scheduler: The scheduler fixture.
+            mock_storage: The mock storage fixture.
+        """
         mock_storage.rollover_incomplete_tasks.side_effect = StorageError("Database error")
         
         # Should not raise
@@ -204,7 +310,15 @@ class TestRolloverScheduler:
     async def test_perform_manual_rollover_uses_defaults(
         self, scheduler: RolloverScheduler, mock_storage: MagicMock
     ) -> None:
-        """perform_manual_rollover should use yesterday/today by default."""
+        """Test that perform_manual_rollover uses default date range.
+
+        Verifies that when called without arguments, the method uses
+        yesterday as from_date and today as to_date.
+
+        Args:
+            scheduler: The scheduler fixture.
+            mock_storage: The mock storage fixture.
+        """
         mock_storage.rollover_incomplete_tasks.return_value = 3
         
         result = await scheduler.perform_manual_rollover()
@@ -218,7 +332,15 @@ class TestRolloverScheduler:
     async def test_perform_manual_rollover_with_custom_dates(
         self, scheduler: RolloverScheduler, mock_storage: MagicMock
     ) -> None:
-        """perform_manual_rollover should accept custom dates."""
+        """Test that perform_manual_rollover accepts custom date range.
+
+        Verifies that the method correctly passes custom from_date and
+        to_date parameters to the storage backend.
+
+        Args:
+            scheduler: The scheduler fixture.
+            mock_storage: The mock storage fixture.
+        """
         custom_from = date(2024, 12, 1)
         custom_to = date(2024, 12, 2)
         mock_storage.rollover_incomplete_tasks.return_value = 2
@@ -238,7 +360,15 @@ class TestRolloverScheduler:
     async def test_before_midnight_rollover_waits_for_ready(
         self, scheduler: RolloverScheduler, mock_bot: MagicMock
     ) -> None:
-        """before_midnight_rollover should wait for bot to be ready."""
+        """Test that before_midnight_rollover waits for bot to be ready.
+
+        Verifies that the before hook waits for the bot to be ready and
+        then sleeps until the next rollover hour.
+
+        Args:
+            scheduler: The scheduler fixture.
+            mock_bot: The mock bot fixture.
+        """
         with patch("todo_bot.scheduler.seconds_until_next_rollover_hour", return_value=0.01):
             with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
                 await scheduler.before_midnight_rollover()
@@ -252,7 +382,11 @@ class TestSetupScheduler:
 
     @pytest.mark.asyncio
     async def test_setup_scheduler_adds_cog(self) -> None:
-        """setup_scheduler should add the RolloverScheduler cog to the bot."""
+        """Test that setup_scheduler adds the RolloverScheduler cog to the bot.
+
+        Verifies that the function creates a RolloverScheduler and registers
+        it as a cog with the bot.
+        """
         mock_bot = MagicMock()
         mock_bot.add_cog = AsyncMock()
         mock_storage = MagicMock()
@@ -264,7 +398,11 @@ class TestSetupScheduler:
 
     @pytest.mark.asyncio
     async def test_setup_scheduler_with_custom_rollover_hour(self) -> None:
-        """setup_scheduler should accept custom rollover hour."""
+        """Test that setup_scheduler accepts a custom rollover hour.
+
+        Verifies that the function correctly passes the rollover_hour
+        parameter to the RolloverScheduler constructor.
+        """
         mock_bot = MagicMock()
         mock_bot.add_cog = AsyncMock()
         mock_storage = MagicMock()
@@ -275,7 +413,11 @@ class TestSetupScheduler:
 
     @pytest.mark.asyncio
     async def test_setup_scheduler_returns_scheduler(self) -> None:
-        """setup_scheduler should return the scheduler instance."""
+        """Test that setup_scheduler returns the configured scheduler instance.
+
+        Verifies that the function returns a RolloverScheduler with the
+        correct bot and storage references.
+        """
         mock_bot = MagicMock()
         mock_bot.add_cog = AsyncMock()
         mock_storage = MagicMock()

@@ -15,7 +15,14 @@ USER_ID = 789
 
 
 def create_mock_interaction(guild: bool = True):
-    """Create a mock Discord interaction."""
+    """Create a mock Discord interaction.
+
+    Args:
+        guild: Whether the interaction is in a guild context. Defaults to True.
+
+    Returns:
+        A MagicMock configured to simulate a Discord interaction.
+    """
     interaction = MagicMock()
     if guild:
         interaction.guild = MagicMock()
@@ -32,7 +39,14 @@ def create_mock_interaction(guild: bool = True):
 
 
 def create_sample_task(id: int = 1):
-    """Create a sample task for testing."""
+    """Create a sample task for testing.
+
+    Args:
+        id: The task ID to assign. Defaults to 1.
+
+    Returns:
+        A Task instance with test data.
+    """
     return Task(
         id=id,
         description="Test task",
@@ -47,7 +61,11 @@ class TestGetUptime:
     """Tests for TasksCog.get_uptime instance method."""
 
     def test_get_uptime_returns_float(self):
-        """Test get_uptime returns a float."""
+        """Test get_uptime returns a float.
+
+        Verifies that the get_uptime method returns a floating point number
+        representing the elapsed time since the cog was initialized.
+        """
         mock_bot = MagicMock()
         mock_storage = MagicMock()
         cog = TasksCog(mock_bot, mock_storage)
@@ -55,7 +73,11 @@ class TestGetUptime:
         assert isinstance(uptime, float)
 
     def test_reset_start_time(self):
-        """Test reset_start_time resets the timer."""
+        """Test reset_start_time resets the timer.
+
+        Verifies that calling reset_start_time sets the uptime back to
+        approximately zero.
+        """
         mock_bot = MagicMock()
         mock_storage = MagicMock()
         cog = TasksCog(mock_bot, mock_storage)
@@ -70,7 +92,11 @@ class TestEditTaskCommand:
 
     @pytest.fixture
     def mock_bot(self):
-        """Create a mock bot."""
+        """Create a mock bot.
+
+        Returns:
+            A MagicMock configured as a Discord bot with empty guilds list.
+        """
         bot = MagicMock()
         bot.guilds = []
         bot.latency = 0.05
@@ -78,7 +104,11 @@ class TestEditTaskCommand:
 
     @pytest.fixture
     def mock_storage(self):
-        """Create a mock storage."""
+        """Create a mock storage.
+
+        Returns:
+            A MagicMock configured as a storage backend with async methods.
+        """
         storage = MagicMock()
         storage.get_task_by_id = AsyncMock()
         storage.update_task = AsyncMock(return_value=True)
@@ -93,12 +123,25 @@ class TestEditTaskCommand:
 
     @pytest.fixture
     def cog(self, mock_bot, mock_storage):
-        """Create a TasksCog instance."""
+        """Create a TasksCog instance.
+
+        Args:
+            mock_bot: The mock bot fixture.
+            mock_storage: The mock storage fixture.
+
+        Returns:
+            A TasksCog instance configured with mock dependencies.
+        """
         return TasksCog(mock_bot, mock_storage)
 
     @pytest.mark.asyncio
     async def test_edit_task_description(self, cog, mock_storage):
-        """Test editing task description."""
+        """Test editing task description.
+
+        Args:
+            cog: The TasksCog fixture.
+            mock_storage: The mock storage fixture.
+        """
         interaction = create_mock_interaction()
         mock_storage.get_task_by_id.return_value = create_sample_task()
 
@@ -110,7 +153,12 @@ class TestEditTaskCommand:
 
     @pytest.mark.asyncio
     async def test_edit_task_priority(self, cog, mock_storage):
-        """Test editing task priority."""
+        """Test editing task priority.
+
+        Args:
+            cog: The TasksCog fixture.
+            mock_storage: The mock storage fixture.
+        """
         interaction = create_mock_interaction()
         mock_storage.get_task_by_id.return_value = create_sample_task()
 
@@ -122,7 +170,12 @@ class TestEditTaskCommand:
 
     @pytest.mark.asyncio
     async def test_edit_task_both(self, cog, mock_storage):
-        """Test editing both description and priority."""
+        """Test editing both description and priority.
+
+        Args:
+            cog: The TasksCog fixture.
+            mock_storage: The mock storage fixture.
+        """
         interaction = create_mock_interaction()
         mock_storage.get_task_by_id.return_value = create_sample_task()
 
@@ -141,7 +194,12 @@ class TestEditTaskCommand:
 
     @pytest.mark.asyncio
     async def test_edit_task_no_changes(self, cog, mock_storage):  # noqa: ARG002
-        """Test edit with no changes shows error."""
+        """Test edit with no changes shows error.
+
+        Args:
+            cog: The TasksCog fixture.
+            mock_storage: The mock storage fixture (unused).
+        """
         interaction = create_mock_interaction()
 
         await cog.edit_task.callback(cog, interaction, task_id=1)
@@ -151,7 +209,12 @@ class TestEditTaskCommand:
 
     @pytest.mark.asyncio
     async def test_edit_task_not_found(self, cog, mock_storage):
-        """Test edit non-existent task."""
+        """Test edit non-existent task.
+
+        Args:
+            cog: The TasksCog fixture.
+            mock_storage: The mock storage fixture.
+        """
         interaction = create_mock_interaction()
         mock_storage.get_task_by_id.return_value = None
 
@@ -162,7 +225,12 @@ class TestEditTaskCommand:
 
     @pytest.mark.asyncio
     async def test_edit_task_no_guild(self, cog, mock_storage):  # noqa: ARG002
-        """Test edit in DM fails."""
+        """Test edit in DM fails.
+
+        Args:
+            cog: The TasksCog fixture.
+            mock_storage: The mock storage fixture (unused).
+        """
         interaction = create_mock_interaction(guild=False)
 
         await cog.edit_task.callback(cog, interaction, task_id=1, description="Test")
@@ -176,7 +244,12 @@ class TestEditTaskCommand:
         cog,
         mock_storage,  # noqa: ARG002
     ):
-        """Test edit with too long description."""
+        """Test edit with too long description.
+
+        Args:
+            cog: The TasksCog fixture.
+            mock_storage: The mock storage fixture (unused).
+        """
         interaction = create_mock_interaction()
         long_desc = "x" * 600
 
@@ -187,7 +260,12 @@ class TestEditTaskCommand:
 
     @pytest.mark.asyncio
     async def test_edit_task_invalid_priority(self, cog, mock_storage):
-        """Test edit with invalid priority."""
+        """Test edit with invalid priority.
+
+        Args:
+            cog: The TasksCog fixture.
+            mock_storage: The mock storage fixture.
+        """
         interaction = create_mock_interaction()
         mock_storage.get_task_by_id.return_value = create_sample_task()
 
@@ -199,7 +277,12 @@ class TestEditTaskCommand:
 
     @pytest.mark.asyncio
     async def test_edit_task_storage_fails(self, cog, mock_storage):
-        """Test edit when storage fails."""
+        """Test edit when storage fails.
+
+        Args:
+            cog: The TasksCog fixture.
+            mock_storage: The mock storage fixture.
+        """
         interaction = create_mock_interaction()
         mock_storage.get_task_by_id.return_value = create_sample_task()
         mock_storage.update_task.return_value = False
@@ -215,7 +298,11 @@ class TestStatusCommand:
 
     @pytest.fixture
     def mock_bot(self):
-        """Create a mock bot."""
+        """Create a mock bot.
+
+        Returns:
+            A MagicMock configured as a Discord bot with two guilds.
+        """
         bot = MagicMock()
         bot.guilds = [MagicMock(), MagicMock()]
         bot.latency = 0.05
@@ -223,7 +310,11 @@ class TestStatusCommand:
 
     @pytest.fixture
     def mock_storage(self):
-        """Create a mock storage."""
+        """Create a mock storage.
+
+        Returns:
+            A MagicMock configured as a storage backend with stats.
+        """
         storage = MagicMock()
         storage.get_stats = AsyncMock(
             return_value={
@@ -237,12 +328,25 @@ class TestStatusCommand:
 
     @pytest.fixture
     def cog(self, mock_bot, mock_storage):
-        """Create a TasksCog instance."""
+        """Create a TasksCog instance.
+
+        Args:
+            mock_bot: The mock bot fixture.
+            mock_storage: The mock storage fixture.
+
+        Returns:
+            A TasksCog instance configured with mock dependencies.
+        """
         return TasksCog(mock_bot, mock_storage)
 
     @pytest.mark.asyncio
     async def test_status_command(self, cog, mock_storage):  # noqa: ARG002
-        """Test status command returns embed."""
+        """Test status command returns embed.
+
+        Args:
+            cog: The TasksCog fixture.
+            mock_storage: The mock storage fixture (unused).
+        """
         interaction = create_mock_interaction()
 
         await cog.status.callback(cog, interaction)
@@ -253,7 +357,12 @@ class TestStatusCommand:
 
     @pytest.mark.asyncio
     async def test_status_shows_stats(self, cog, mock_storage):
-        """Test status shows database stats."""
+        """Test status shows database stats.
+
+        Args:
+            cog: The TasksCog fixture.
+            mock_storage: The mock storage fixture.
+        """
         interaction = create_mock_interaction()
 
         await cog.status.callback(cog, interaction)
@@ -262,7 +371,12 @@ class TestStatusCommand:
 
     @pytest.mark.asyncio
     async def test_status_handles_stats_error(self, cog, mock_storage):
-        """Test status handles storage error gracefully."""
+        """Test status handles storage error gracefully.
+
+        Args:
+            cog: The TasksCog fixture.
+            mock_storage: The mock storage fixture.
+        """
         interaction = create_mock_interaction()
         mock_storage.get_stats.side_effect = StorageError("DB error")
 
@@ -277,7 +391,11 @@ class TestRolloverCommand:
 
     @pytest.fixture
     def mock_bot(self):
-        """Create a mock bot."""
+        """Create a mock bot.
+
+        Returns:
+            A MagicMock configured as a Discord bot with empty guilds list.
+        """
         bot = MagicMock()
         bot.guilds = []
         bot.latency = 0.05
@@ -285,7 +403,11 @@ class TestRolloverCommand:
 
     @pytest.fixture
     def mock_storage(self):
-        """Create a mock storage."""
+        """Create a mock storage.
+
+        Returns:
+            A MagicMock configured as a storage backend with rollover methods.
+        """
         storage = MagicMock()
         storage.get_tasks = AsyncMock(return_value=[])
         storage.rollover_incomplete_tasks = AsyncMock(return_value=0)
@@ -293,12 +415,25 @@ class TestRolloverCommand:
 
     @pytest.fixture
     def cog(self, mock_bot, mock_storage):
-        """Create a TasksCog instance."""
+        """Create a TasksCog instance.
+
+        Args:
+            mock_bot: The mock bot fixture.
+            mock_storage: The mock storage fixture.
+
+        Returns:
+            A TasksCog instance configured with mock dependencies.
+        """
         return TasksCog(mock_bot, mock_storage)
 
     @pytest.mark.asyncio
     async def test_rollover_no_incomplete_tasks(self, cog, mock_storage):
-        """Test rollover when no incomplete tasks from yesterday."""
+        """Test rollover when no incomplete tasks from yesterday.
+
+        Args:
+            cog: The TasksCog fixture.
+            mock_storage: The mock storage fixture.
+        """
         interaction = create_mock_interaction()
         mock_storage.get_tasks.return_value = []
 
@@ -311,7 +446,12 @@ class TestRolloverCommand:
 
     @pytest.mark.asyncio
     async def test_rollover_success(self, cog, mock_storage):
-        """Test successful rollover of tasks."""
+        """Test successful rollover of tasks.
+
+        Args:
+            cog: The TasksCog fixture.
+            mock_storage: The mock storage fixture.
+        """
         interaction = create_mock_interaction()
         incomplete_task = create_sample_task()
         mock_storage.get_tasks.return_value = [incomplete_task]
@@ -327,7 +467,12 @@ class TestRolloverCommand:
 
     @pytest.mark.asyncio
     async def test_rollover_already_rolled(self, cog, mock_storage):
-        """Test rollover when tasks already rolled over."""
+        """Test rollover when tasks already rolled over.
+
+        Args:
+            cog: The TasksCog fixture.
+            mock_storage: The mock storage fixture.
+        """
         interaction = create_mock_interaction()
         incomplete_task = create_sample_task()
         mock_storage.get_tasks.return_value = [incomplete_task]
@@ -342,7 +487,12 @@ class TestRolloverCommand:
 
     @pytest.mark.asyncio
     async def test_rollover_no_guild(self, cog, mock_storage):  # noqa: ARG002
-        """Test rollover in DM fails."""
+        """Test rollover in DM fails.
+
+        Args:
+            cog: The TasksCog fixture.
+            mock_storage: The mock storage fixture (unused).
+        """
         interaction = create_mock_interaction(guild=False)
 
         await cog.rollover_tasks.callback(cog, interaction)

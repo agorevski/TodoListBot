@@ -12,7 +12,14 @@ class TestRolloverIncompleteTasks:
 
     @pytest.fixture
     async def storage(self, tmp_path) -> SQLiteTaskStorage:
-        """Create an initialized SQLite storage for testing."""
+        """Create an initialized SQLite storage for testing.
+
+        Args:
+            tmp_path: Pytest fixture providing a temporary directory path.
+
+        Yields:
+            SQLiteTaskStorage: An initialized storage instance for testing.
+        """
         db_path = str(tmp_path / "test_rollover.db")
         storage = SQLiteTaskStorage(db_path=db_path)
         await storage.initialize()
@@ -21,7 +28,11 @@ class TestRolloverIncompleteTasks:
 
     @pytest.mark.asyncio
     async def test_rollover_no_tasks(self, storage: SQLiteTaskStorage) -> None:
-        """Should return 0 when there are no tasks to roll over."""
+        """Verify rollover returns 0 when there are no tasks to roll over.
+
+        Args:
+            storage: The SQLite storage fixture for testing.
+        """
         yesterday = date.today() - timedelta(days=1)
         today = date.today()
         
@@ -34,7 +45,11 @@ class TestRolloverIncompleteTasks:
 
     @pytest.mark.asyncio
     async def test_rollover_all_tasks_complete(self, storage: SQLiteTaskStorage) -> None:
-        """Should return 0 when all tasks are completed."""
+        """Verify rollover returns 0 when all tasks are completed.
+
+        Args:
+            storage: The SQLite storage fixture for testing.
+        """
         yesterday = date.today() - timedelta(days=1)
         today = date.today()
         
@@ -63,7 +78,11 @@ class TestRolloverIncompleteTasks:
 
     @pytest.mark.asyncio
     async def test_rollover_incomplete_tasks(self, storage: SQLiteTaskStorage) -> None:
-        """Should copy incomplete tasks to the new date."""
+        """Verify rollover copies incomplete tasks to the new date.
+
+        Args:
+            storage: The SQLite storage fixture for testing.
+        """
         yesterday = date.today() - timedelta(days=1)
         today = date.today()
         
@@ -116,7 +135,11 @@ class TestRolloverIncompleteTasks:
 
     @pytest.mark.asyncio
     async def test_rollover_preserves_priority(self, storage: SQLiteTaskStorage) -> None:
-        """Should preserve the original task's priority."""
+        """Verify rollover preserves the original task's priority.
+
+        Args:
+            storage: The SQLite storage fixture for testing.
+        """
         yesterday = date.today() - timedelta(days=1)
         today = date.today()
         
@@ -155,7 +178,11 @@ class TestRolloverIncompleteTasks:
 
     @pytest.mark.asyncio
     async def test_rollover_creates_undone_tasks(self, storage: SQLiteTaskStorage) -> None:
-        """Rolled over tasks should be marked as not done."""
+        """Verify rolled over tasks are marked as not done.
+
+        Args:
+            storage: The SQLite storage fixture for testing.
+        """
         yesterday = date.today() - timedelta(days=1)
         today = date.today()
         
@@ -185,7 +212,11 @@ class TestRolloverIncompleteTasks:
 
     @pytest.mark.asyncio
     async def test_rollover_skips_duplicates(self, storage: SQLiteTaskStorage) -> None:
-        """Should not create duplicate tasks on the target date."""
+        """Verify rollover does not create duplicate tasks on the target date.
+
+        Args:
+            storage: The SQLite storage fixture for testing.
+        """
         yesterday = date.today() - timedelta(days=1)
         today = date.today()
         
@@ -227,7 +258,11 @@ class TestRolloverIncompleteTasks:
 
     @pytest.mark.asyncio
     async def test_rollover_mixed_complete_incomplete(self, storage: SQLiteTaskStorage) -> None:
-        """Should only roll over incomplete tasks, not completed ones."""
+        """Verify rollover only rolls over incomplete tasks, not completed ones.
+
+        Args:
+            storage: The SQLite storage fixture for testing.
+        """
         yesterday = date.today() - timedelta(days=1)
         today = date.today()
         
@@ -275,7 +310,11 @@ class TestRolloverIncompleteTasks:
 
     @pytest.mark.asyncio
     async def test_rollover_multiple_users(self, storage: SQLiteTaskStorage) -> None:
-        """Should roll over tasks for multiple users independently."""
+        """Verify rollover handles tasks for multiple users independently.
+
+        Args:
+            storage: The SQLite storage fixture for testing.
+        """
         yesterday = date.today() - timedelta(days=1)
         today = date.today()
         
@@ -327,7 +366,11 @@ class TestRolloverIncompleteTasks:
 
     @pytest.mark.asyncio
     async def test_rollover_original_tasks_unchanged(self, storage: SQLiteTaskStorage) -> None:
-        """Original tasks should remain on the old date."""
+        """Verify original tasks remain unchanged on the old date after rollover.
+
+        Args:
+            storage: The SQLite storage fixture for testing.
+        """
         yesterday = date.today() - timedelta(days=1)
         today = date.today()
         
@@ -360,11 +403,14 @@ class TestRolloverIncompleteTasks:
 
     @pytest.mark.asyncio
     async def test_rollover_batch_query_efficiency(self, storage: SQLiteTaskStorage) -> None:
-        """Test that rollover correctly handles multiple tasks efficiently.
-        
-        This test verifies the batch query optimization by creating many 
+        """Verify rollover correctly handles multiple tasks efficiently.
+
+        This test verifies the batch query optimization by creating many
         incomplete tasks and checking that rollover works correctly when
         some already exist on the target date.
+
+        Args:
+            storage: The SQLite storage fixture for testing.
         """
         yesterday = date.today() - timedelta(days=1)
         today = date.today()
@@ -419,7 +465,14 @@ class TestGetAllUserContexts:
 
     @pytest.fixture
     async def storage(self, tmp_path) -> SQLiteTaskStorage:
-        """Create an initialized SQLite storage for testing."""
+        """Create an initialized SQLite storage for testing.
+
+        Args:
+            tmp_path: Pytest fixture providing a temporary directory path.
+
+        Yields:
+            SQLiteTaskStorage: An initialized storage instance for testing.
+        """
         db_path = str(tmp_path / "test_contexts.db")
         storage = SQLiteTaskStorage(db_path=db_path)
         await storage.initialize()
@@ -428,13 +481,21 @@ class TestGetAllUserContexts:
 
     @pytest.mark.asyncio
     async def test_no_tasks(self, storage: SQLiteTaskStorage) -> None:
-        """Should return empty list when no tasks exist."""
+        """Verify get_all_user_contexts returns empty list when no tasks exist.
+
+        Args:
+            storage: The SQLite storage fixture for testing.
+        """
         contexts = await storage.get_all_user_contexts(date.today())
         assert contexts == []
 
     @pytest.mark.asyncio
     async def test_single_user_context(self, storage: SQLiteTaskStorage) -> None:
-        """Should return single context for one user."""
+        """Verify get_all_user_contexts returns single context for one user.
+
+        Args:
+            storage: The SQLite storage fixture for testing.
+        """
         today = date.today()
         
         await storage.add_task(
@@ -453,7 +514,11 @@ class TestGetAllUserContexts:
 
     @pytest.mark.asyncio
     async def test_multiple_user_contexts(self, storage: SQLiteTaskStorage) -> None:
-        """Should return all unique user contexts."""
+        """Verify get_all_user_contexts returns all unique user contexts.
+
+        Args:
+            storage: The SQLite storage fixture for testing.
+        """
         today = date.today()
         
         # Different users in same channel
@@ -493,7 +558,11 @@ class TestGetAllUserContexts:
 
     @pytest.mark.asyncio
     async def test_returns_unique_contexts_only(self, storage: SQLiteTaskStorage) -> None:
-        """Should not return duplicate contexts."""
+        """Verify get_all_user_contexts does not return duplicate contexts.
+
+        Args:
+            storage: The SQLite storage fixture for testing.
+        """
         today = date.today()
         
         # Same user with multiple tasks
@@ -521,7 +590,11 @@ class TestGetAllUserContexts:
 
     @pytest.mark.asyncio
     async def test_filters_by_date(self, storage: SQLiteTaskStorage) -> None:
-        """Should only return contexts for the specified date."""
+        """Verify get_all_user_contexts only returns contexts for the specified date.
+
+        Args:
+            storage: The SQLite storage fixture for testing.
+        """
         today = date.today()
         yesterday = today - timedelta(days=1)
         

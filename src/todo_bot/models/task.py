@@ -20,7 +20,12 @@ class Priority(Enum):
 
     @property
     def emoji(self) -> str:
-        """Return the emoji representation for this priority."""
+        """Return the emoji representation for this priority.
+
+        Returns:
+            str: Emoji character representing the priority level
+                (🔴 for A, 🟡 for B, 🟢 for C).
+        """
         emoji_map = {
             Priority.A: "🔴",
             Priority.B: "🟡",
@@ -30,7 +35,12 @@ class Priority(Enum):
 
     @property
     def display_name(self) -> str:
-        """Return the display name for this priority."""
+        """Return the display name for this priority.
+
+        Returns:
+            str: Formatted string with emoji and priority level
+                (e.g., "🔴 **A-Priority**").
+        """
         return f"{self.emoji} **{self.value}-Priority**"
 
     @classmethod
@@ -77,7 +87,11 @@ class Task:
     task_date: date = field(default_factory=date.today)
 
     def __post_init__(self) -> None:
-        """Validate and normalize task data after initialization."""
+        """Validate and normalize task data after initialization.
+
+        Raises:
+            ValidationError: If the description is too short or too long.
+        """
         # Convert string priority to enum if needed
         if isinstance(self.priority, str):
             self.priority = Priority.from_string(self.priority)
@@ -108,7 +122,12 @@ class Task:
         )
 
     def __repr__(self) -> str:
-        """Return a developer-friendly string representation."""
+        """Return a developer-friendly string representation.
+
+        Returns:
+            str: String representation showing id, priority, done status,
+                user_id, and truncated description.
+        """
         return (
             f"Task(id={self.id}, "
             f"priority={self.priority.value}, "
@@ -139,11 +158,17 @@ class Task:
         return self.task_date == date.today()
 
     def mark_done(self) -> None:
-        """Mark this task as completed."""
+        """Mark this task as completed.
+
+        Sets the done attribute to True.
+        """
         self.done = True
 
     def mark_undone(self) -> None:
-        """Mark this task as not completed."""
+        """Mark this task as not completed.
+
+        Sets the done attribute to False.
+        """
         self.done = False
 
     def to_dict(self) -> dict:

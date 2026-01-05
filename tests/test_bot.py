@@ -14,27 +14,43 @@ class TestTodoBot:
     """Tests for TodoBot class."""
 
     def test_bot_creation(self) -> None:
-        """Test creating a bot with default settings."""
+        """Test creating a bot with default settings.
+
+        Verifies that a TodoBot instance is created with default storage
+        and command prefix.
+        """
         bot = TodoBot()
 
         assert bot.storage is not None
         assert bot.command_prefix == "!"
 
     def test_bot_creation_with_storage(self) -> None:
-        """Test creating a bot with custom storage."""
+        """Test creating a bot with custom storage.
+
+        Verifies that a TodoBot instance uses the provided storage
+        instead of creating a default one.
+        """
         mock_storage = MagicMock()
         bot = TodoBot(storage=mock_storage)
 
         assert bot.storage == mock_storage
 
     def test_bot_creation_with_custom_prefix(self) -> None:
-        """Test creating a bot with custom command prefix."""
+        """Test creating a bot with custom command prefix.
+
+        Verifies that the bot uses the specified command prefix
+        instead of the default '!' prefix.
+        """
         bot = TodoBot(command_prefix="?")
 
         assert bot.command_prefix == "?"
 
     def test_bot_creation_with_config(self) -> None:
-        """Test creating a bot with BotConfig."""
+        """Test creating a bot with BotConfig.
+
+        Verifies that the bot properly stores and uses the provided
+        configuration object.
+        """
         config = BotConfig(discord_token="test_token")
         bot = TodoBot(config=config)
 
@@ -43,7 +59,11 @@ class TestTodoBot:
 
     @pytest.mark.asyncio
     async def test_setup_hook(self) -> None:
-        """Test bot setup hook initializes storage and cog."""
+        """Test bot setup hook initializes storage and cog.
+
+        Verifies that setup_hook properly initializes storage, adds
+        the required cogs, and syncs commands.
+        """
         mock_storage = MagicMock()
         mock_storage.initialize = AsyncMock()
 
@@ -62,7 +82,11 @@ class TestTodoBot:
 
     @pytest.mark.asyncio
     async def test_setup_hook_skip_sync(self) -> None:
-        """Test bot setup hook skips sync when config says so."""
+        """Test bot setup hook skips sync when config says so.
+
+        Verifies that setup_hook does not sync commands globally when
+        sync_commands_globally is set to False in the config.
+        """
         mock_storage = MagicMock()
         mock_storage.initialize = AsyncMock()
 
@@ -88,7 +112,14 @@ class TestTodoBot:
 
     @pytest.mark.asyncio
     async def test_on_ready(self, caplog) -> None:
-        """Test on_ready event logs status."""
+        """Test on_ready event logs status.
+
+        Args:
+            caplog: Pytest fixture for capturing log output.
+
+        Verifies that the on_ready event properly logs the bot's
+        username and user ID.
+        """
         mock_storage = MagicMock()
         bot = TodoBot(storage=mock_storage)
 
@@ -108,7 +139,14 @@ class TestTodoBot:
 
     @pytest.mark.asyncio
     async def test_on_ready_no_user(self, caplog) -> None:
-        """Test on_ready when user is None."""
+        """Test on_ready when user is None.
+
+        Args:
+            caplog: Pytest fixture for capturing log output.
+
+        Verifies that on_ready handles the case where the bot user
+        is None gracefully without logging.
+        """
         mock_storage = MagicMock()
         bot = TodoBot(storage=mock_storage)
 
@@ -123,7 +161,11 @@ class TestTodoBot:
 
     @pytest.mark.asyncio
     async def test_close(self) -> None:
-        """Test bot close cleans up storage."""
+        """Test bot close cleans up storage.
+
+        Verifies that closing the bot properly calls the storage
+        close method to clean up resources.
+        """
         mock_storage = MagicMock()
         mock_storage.close = AsyncMock()
 
@@ -136,7 +178,14 @@ class TestTodoBot:
 
     @pytest.mark.asyncio
     async def test_close_with_storage_error(self, caplog) -> None:
-        """Test bot close handles storage error gracefully."""
+        """Test bot close handles storage error gracefully.
+
+        Args:
+            caplog: Pytest fixture for capturing log output.
+
+        Verifies that the bot logs an error but does not raise when
+        storage close fails.
+        """
         from todo_bot.exceptions import StorageError
 
         mock_storage = MagicMock()
@@ -159,21 +208,33 @@ class TestCreateBot:
     """Tests for create_bot function."""
 
     def test_create_bot_default(self) -> None:
-        """Test creating bot with default settings."""
+        """Test creating bot with default settings.
+
+        Verifies that create_bot returns a properly configured
+        TodoBot instance with default storage.
+        """
         bot = create_bot()
 
         assert isinstance(bot, TodoBot)
         assert bot.storage is not None
 
     def test_create_bot_with_storage(self) -> None:
-        """Test creating bot with custom storage."""
+        """Test creating bot with custom storage.
+
+        Verifies that create_bot uses the provided storage instance
+        when creating the bot.
+        """
         mock_storage = MagicMock()
         bot = create_bot(storage=mock_storage)
 
         assert bot.storage == mock_storage
 
     def test_create_bot_with_config(self) -> None:
-        """Test creating bot with config."""
+        """Test creating bot with config.
+
+        Verifies that create_bot properly passes the configuration
+        object to the created bot.
+        """
         config = BotConfig(discord_token="test_token")
         bot = create_bot(config=config)
 
@@ -184,7 +245,11 @@ class TestRunBot:
     """Tests for run_bot function."""
 
     def test_run_bot_no_token(self) -> None:
-        """Test run_bot raises when no token is provided."""
+        """Test run_bot raises when no token is provided.
+
+        Verifies that run_bot raises a ConfigurationError when
+        no Discord token is available in the environment.
+        """
         with (
             patch.dict("os.environ", {}, clear=True),
             patch("dotenv.load_dotenv"),
@@ -193,7 +258,11 @@ class TestRunBot:
             run_bot()
 
     def test_run_bot_with_env_token(self) -> None:
-        """Test run_bot uses environment variable token."""
+        """Test run_bot uses environment variable token.
+
+        Verifies that run_bot correctly reads the DISCORD_TOKEN
+        from environment variables and uses it to run the bot.
+        """
         with (
             patch.dict(
                 "os.environ",
@@ -211,7 +280,11 @@ class TestRunBot:
             mock_bot.run.assert_called_once_with("test_token")
 
     def test_run_bot_with_direct_token(self) -> None:
-        """Test run_bot uses directly provided token."""
+        """Test run_bot uses directly provided token.
+
+        Verifies that run_bot uses a token passed directly as an
+        argument instead of reading from environment variables.
+        """
         with (
             patch("dotenv.load_dotenv"),
             patch("todo_bot.bot.create_bot") as mock_create,
@@ -228,16 +301,28 @@ class TestSetupLogging:
     """Tests for setup_logging function."""
 
     def test_setup_logging_default(self) -> None:
-        """Test setup_logging with default INFO level."""
+        """Test setup_logging with default INFO level.
+
+        Verifies that setup_logging creates a logger when called
+        without arguments.
+        """
         setup_logging()
 
         logger = logging.getLogger("test")
         assert logger is not None
 
     def test_setup_logging_debug(self) -> None:
-        """Test setup_logging with DEBUG level."""
+        """Test setup_logging with DEBUG level.
+
+        Verifies that setup_logging accepts DEBUG as a valid
+        logging level.
+        """
         setup_logging("DEBUG")
 
     def test_setup_logging_invalid_level(self) -> None:
-        """Test setup_logging with invalid level defaults to INFO."""
+        """Test setup_logging with invalid level defaults to INFO.
+
+        Verifies that setup_logging handles invalid logging levels
+        gracefully by defaulting to INFO.
+        """
         setup_logging("INVALID")

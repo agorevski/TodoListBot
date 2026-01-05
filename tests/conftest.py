@@ -30,7 +30,11 @@ TEST_OTHER_USER_ID = 999999999
 
 @pytest.fixture(scope="session")
 def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
-    """Create an event loop for the test session."""
+    """Create an event loop for the test session.
+
+    Yields:
+        asyncio.AbstractEventLoop: A new event loop instance for async tests.
+    """
     loop = asyncio.new_event_loop()
     yield loop
     loop.close()
@@ -43,7 +47,14 @@ def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
 
 @pytest_asyncio.fixture
 async def storage() -> AsyncGenerator[SQLiteTaskStorage, None]:
-    """Create a temporary SQLite storage for testing."""
+    """Create a temporary SQLite storage for testing.
+
+    Creates an initialized SQLite storage instance using a temporary directory.
+    The storage is automatically closed after the test completes.
+
+    Yields:
+        SQLiteTaskStorage: An initialized storage instance ready for testing.
+    """
     with tempfile.TemporaryDirectory() as tmpdir:
         db_path = os.path.join(tmpdir, "test_tasks.db")
         storage = SQLiteTaskStorage(db_path=db_path)
@@ -54,7 +65,14 @@ async def storage() -> AsyncGenerator[SQLiteTaskStorage, None]:
 
 @pytest.fixture
 def mock_storage() -> MagicMock:
-    """Create a mock storage for testing."""
+    """Create a mock storage for testing.
+
+    Creates a MagicMock object with all storage interface methods configured
+    as AsyncMock instances with sensible default return values.
+
+    Returns:
+        MagicMock: A mock storage object with pre-configured async methods.
+    """
     storage = MagicMock()
     storage.add_task = AsyncMock()
     storage.get_tasks = AsyncMock(return_value=[])
@@ -85,7 +103,13 @@ def mock_storage() -> MagicMock:
 
 @pytest.fixture
 def sample_task() -> Task:
-    """Create a sample task for testing."""
+    """Create a sample task for testing.
+
+    Creates an incomplete A-priority task with standard test IDs and today's date.
+
+    Returns:
+        Task: A sample task instance with id=1, priority A, and done=False.
+    """
     return Task(
         id=1,
         description="Test task",
@@ -100,7 +124,13 @@ def sample_task() -> Task:
 
 @pytest.fixture
 def sample_task_done() -> Task:
-    """Create a sample completed task for testing."""
+    """Create a sample completed task for testing.
+
+    Creates a completed B-priority task with standard test IDs and today's date.
+
+    Returns:
+        Task: A sample task instance with id=2, priority B, and done=True.
+    """
     return Task(
         id=2,
         description="Completed task",
@@ -115,7 +145,18 @@ def sample_task_done() -> Task:
 
 @pytest.fixture
 def sample_tasks() -> list[Task]:
-    """Create a list of sample tasks for testing."""
+    """Create a list of sample tasks for testing.
+
+    Creates a list of four tasks with varying priorities and completion states
+    for comprehensive testing scenarios.
+
+    Returns:
+        list[Task]: A list containing:
+            - Task 1: A-priority, incomplete
+            - Task 2: A-priority, complete
+            - Task 3: B-priority, incomplete
+            - Task 4: C-priority, incomplete
+    """
     return [
         Task(
             id=1,
@@ -163,7 +204,14 @@ def sample_tasks() -> list[Task]:
 
 @pytest.fixture
 def mock_interaction() -> MagicMock:
-    """Create a mock Discord interaction."""
+    """Create a mock Discord interaction.
+
+    Creates a MagicMock representing a Discord interaction with pre-configured
+    guild, channel, user, and response attributes using standard test IDs.
+
+    Returns:
+        MagicMock: A mock interaction object with configured async response methods.
+    """
     interaction = MagicMock()
     interaction.guild = MagicMock()
     interaction.guild.id = TEST_SERVER_ID
@@ -180,7 +228,14 @@ def mock_interaction() -> MagicMock:
 
 @pytest.fixture
 def mock_bot() -> MagicMock:
-    """Create a mock Discord bot."""
+    """Create a mock Discord bot.
+
+    Creates a MagicMock representing a Discord bot with pre-configured
+    guilds, latency, and cog management methods.
+
+    Returns:
+        MagicMock: A mock bot object with 2 guilds and 50ms latency.
+    """
     bot = MagicMock()
     bot.guilds = [MagicMock(), MagicMock()]  # 2 guilds
     bot.latency = 0.05  # 50ms latency

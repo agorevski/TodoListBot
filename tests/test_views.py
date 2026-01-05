@@ -15,7 +15,17 @@ def create_task(
     priority: Priority = Priority.A,
     done: bool = False,
 ) -> Task:
-    """Helper to create a task for testing."""
+    """Create a task instance for testing purposes.
+
+    Args:
+        id: The unique identifier for the task.
+        description: The task description text.
+        priority: The priority level of the task.
+        done: Whether the task is marked as completed.
+
+    Returns:
+        A Task instance configured with test server, channel, and user IDs.
+    """
     return Task(
         id=id,
         description=description,
@@ -32,7 +42,11 @@ class TestTaskButton:
 
     @pytest.mark.asyncio
     async def test_button_incomplete_task(self) -> None:
-        """Test button for incomplete task."""
+        """Test that a button for an incomplete task displays correctly.
+
+        Verifies that the button label contains 'Done #' prefix and
+        that an emoji is present on the button.
+        """
         task = create_task(id=5, done=False)
         storage = MagicMock()
 
@@ -44,7 +58,11 @@ class TestTaskButton:
 
     @pytest.mark.asyncio
     async def test_button_completed_task(self) -> None:
-        """Test button for completed task shows 'Undo' without number."""
+        """Test that a button for a completed task shows 'Undo' label.
+
+        Verifies that completed tasks display 'Undo' without a display
+        number since they don't have display numbers in the task list.
+        """
         task = create_task(id=3, done=True)
         storage = MagicMock()
 
@@ -57,7 +75,11 @@ class TestTaskButton:
 
     @pytest.mark.asyncio
     async def test_button_custom_id_format(self) -> None:
-        """Test that button custom_id is properly formatted."""
+        """Test that button custom_id follows the expected format.
+
+        Verifies that the custom_id starts with 'task_' followed by the
+        database ID for internal operations.
+        """
         task = create_task(id=7)
         storage = MagicMock()
 
@@ -68,7 +90,12 @@ class TestTaskButton:
 
     @pytest.mark.asyncio
     async def test_button_callback_wrong_user(self) -> None:
-        """Test that callback rejects clicks from wrong user."""
+        """Test that callback rejects clicks from a different user.
+
+        Verifies that when a user who doesn't own the task clicks the
+        button, an ephemeral error message is sent indicating they can
+        only modify their own tasks.
+        """
         task = create_task(id=1)
         storage = MagicMock()
         button = TaskButton(task=task, storage=storage, display_index=1)
@@ -89,7 +116,11 @@ class TestTaskButton:
 
     @pytest.mark.asyncio
     async def test_button_callback_mark_done(self) -> None:
-        """Test button callback marks task as done."""
+        """Test that button callback successfully marks a task as done.
+
+        Verifies that clicking the button on an incomplete task calls
+        the storage's mark_task_done method and updates the task state.
+        """
         task = create_task(id=1, done=False)
         storage = MagicMock()
         storage.mark_task_done = AsyncMock(return_value=True)
@@ -123,7 +154,11 @@ class TestTaskButton:
 
     @pytest.mark.asyncio
     async def test_button_callback_mark_undone(self) -> None:
-        """Test button callback marks task as undone."""
+        """Test that button callback successfully marks a task as undone.
+
+        Verifies that clicking the button on a completed task calls
+        the storage's mark_task_undone method and updates the task state.
+        """
         task = create_task(id=1, done=True)
         storage = MagicMock()
         storage.mark_task_undone = AsyncMock(return_value=True)
@@ -156,7 +191,11 @@ class TestTaskButton:
 
     @pytest.mark.asyncio
     async def test_button_callback_mark_undone_fails(self) -> None:
-        """Test button callback when mark undone fails."""
+        """Test button callback behavior when mark undone operation fails.
+
+        Verifies that when storage.mark_task_undone returns False, an
+        appropriate 'not found' error message is displayed to the user.
+        """
         task = create_task(id=1, done=True)
         storage = MagicMock()
         storage.mark_task_undone = AsyncMock(return_value=False)
@@ -190,7 +229,11 @@ class TestTaskButton:
 
     @pytest.mark.asyncio
     async def test_button_callback_task_not_found(self) -> None:
-        """Test button callback when task update fails."""
+        """Test button callback behavior when task update fails.
+
+        Verifies that when storage.mark_task_done returns False, an
+        appropriate 'not found' error message is displayed to the user.
+        """
         task = create_task(id=1, done=False)
         storage = MagicMock()
         storage.mark_task_done = AsyncMock(return_value=False)
@@ -223,7 +266,11 @@ class TestTaskButton:
 
     @pytest.mark.asyncio
     async def test_button_callback_no_view(self) -> None:
-        """Test button callback when button is not attached to a view."""
+        """Test button callback when button is not attached to a view.
+
+        Verifies that the callback handles the case where button.view is
+        None gracefully, completing the storage operation without raising.
+        """
         task = create_task(id=1, done=False)
         storage = MagicMock()
         storage.mark_task_done = AsyncMock(return_value=True)
@@ -250,7 +297,11 @@ class TestTaskListView:
 
     @pytest.mark.asyncio
     async def test_view_creation_empty(self) -> None:
-        """Test creating view with no tasks."""
+        """Test creating a TaskListView with an empty task list.
+
+        Verifies that the view has no child buttons when created with
+        no tasks.
+        """
         storage = MagicMock()
         view = TaskListView(
             tasks=[],
@@ -264,7 +315,11 @@ class TestTaskListView:
 
     @pytest.mark.asyncio
     async def test_view_creation_with_tasks(self) -> None:
-        """Test creating view with tasks adds buttons."""
+        """Test creating a TaskListView with multiple tasks.
+
+        Verifies that the view creates one button per task when
+        initialized with a list of tasks.
+        """
         tasks = [create_task(id=1), create_task(id=2)]
         storage = MagicMock()
 
@@ -280,7 +335,11 @@ class TestTaskListView:
 
     @pytest.mark.asyncio
     async def test_view_max_buttons(self) -> None:
-        """Test that view limits to 25 buttons."""
+        """Test that view respects Discord's 25 button limit.
+
+        Verifies that when more than 25 tasks are provided, only the
+        first 25 buttons are added to the view.
+        """
         tasks = [create_task(id=i) for i in range(30)]
         storage = MagicMock()
 
@@ -296,7 +355,10 @@ class TestTaskListView:
 
     @pytest.mark.asyncio
     async def test_view_get_content(self) -> None:
-        """Test getting formatted content."""
+        """Test that get_content returns formatted task list content.
+
+        Verifies that the content includes the task description text.
+        """
         tasks = [create_task(description="Test task")]
         storage = MagicMock()
 
@@ -313,7 +375,11 @@ class TestTaskListView:
 
     @pytest.mark.asyncio
     async def test_view_refresh(self) -> None:
-        """Test refreshing the view."""
+        """Test that refresh updates the view with latest task data.
+
+        Verifies that refresh calls storage.get_tasks and edits the
+        interaction message with updated content.
+        """
         tasks = [create_task(id=1)]
         storage = MagicMock()
         storage.get_tasks = AsyncMock(return_value=[create_task(id=1, done=True)])
@@ -337,7 +403,11 @@ class TestTaskListView:
 
     @pytest.mark.asyncio
     async def test_view_refresh_message_deleted(self) -> None:
-        """Test refresh when message was deleted."""
+        """Test that refresh handles deleted message gracefully.
+
+        Verifies that when the message edit raises NotFound error,
+        the refresh method does not raise an exception.
+        """
         import discord
 
         tasks = [create_task(id=1)]
@@ -363,7 +433,10 @@ class TestTaskListView:
 
     @pytest.mark.asyncio
     async def test_view_set_message(self) -> None:
-        """Test setting message reference."""
+        """Test that set_message stores the message reference.
+
+        Verifies that the internal _message attribute is set correctly.
+        """
         storage = MagicMock()
         view = TaskListView(
             tasks=[],
@@ -380,7 +453,11 @@ class TestTaskListView:
 
     @pytest.mark.asyncio
     async def test_view_on_timeout(self) -> None:
-        """Test timeout disables buttons."""
+        """Test that on_timeout disables all buttons in the view.
+
+        Verifies that when the view times out, all button children are
+        disabled and the message is edited to reflect this state.
+        """
         import discord
 
         tasks = [create_task(id=1)]
@@ -408,7 +485,11 @@ class TestTaskListView:
 
     @pytest.mark.asyncio
     async def test_view_on_timeout_no_message(self) -> None:
-        """Test timeout when no message is set."""
+        """Test that on_timeout handles missing message gracefully.
+
+        Verifies that when no message reference is set, the timeout
+        method does not raise an exception.
+        """
         tasks = [create_task(id=1)]
         storage = MagicMock()
 
@@ -425,7 +506,11 @@ class TestTaskListView:
 
     @pytest.mark.asyncio
     async def test_view_on_timeout_message_deleted(self) -> None:
-        """Test timeout when message was deleted."""
+        """Test that on_timeout handles deleted message gracefully.
+
+        Verifies that when the message edit raises NotFound error,
+        the timeout method does not raise an exception.
+        """
         import discord
 
         tasks = [create_task(id=1)]
@@ -454,7 +539,11 @@ class TestCreateTaskListView:
 
     @pytest.mark.asyncio
     async def test_create_view(self) -> None:
-        """Test creating a view with helper function."""
+        """Test that create_task_list_view creates a properly configured view.
+
+        Verifies that the helper function returns a TaskListView instance
+        with correct user_id, server_id, and channel_id attributes.
+        """
         tasks = [create_task(id=1)]
         storage = MagicMock()
 
@@ -477,7 +566,11 @@ class TestViewHttpErrors:
 
     @pytest.mark.asyncio
     async def test_view_refresh_rate_limited(self) -> None:
-        """Test refresh when rate limited (429 error)."""
+        """Test that refresh handles rate limiting gracefully.
+
+        Verifies that when the message edit raises HTTPException with
+        status 429 (rate limited), the refresh method does not raise.
+        """
         import discord
 
         tasks = [create_task(id=1)]
@@ -507,7 +600,11 @@ class TestViewHttpErrors:
 
     @pytest.mark.asyncio
     async def test_view_refresh_other_http_error(self) -> None:
-        """Test refresh with other HTTP error."""
+        """Test that refresh handles other HTTP errors gracefully.
+
+        Verifies that when the message edit raises HTTPException with
+        status 500 (server error), the refresh method does not raise.
+        """
         import discord
 
         tasks = [create_task(id=1)]
@@ -537,7 +634,11 @@ class TestViewHttpErrors:
 
     @pytest.mark.asyncio
     async def test_view_on_timeout_rate_limited(self) -> None:
-        """Test timeout when rate limited (429 error)."""
+        """Test that on_timeout handles rate limiting gracefully.
+
+        Verifies that when the message edit raises HTTPException with
+        status 429 (rate limited), the timeout method does not raise.
+        """
         import discord
 
         tasks = [create_task(id=1)]
@@ -566,7 +667,11 @@ class TestViewHttpErrors:
 
     @pytest.mark.asyncio
     async def test_view_on_timeout_other_http_error(self) -> None:
-        """Test timeout with other HTTP error."""
+        """Test that on_timeout handles other HTTP errors gracefully.
+
+        Verifies that when the message edit raises HTTPException with
+        status 500 (server error), the timeout method does not raise.
+        """
         import discord
 
         tasks = [create_task(id=1)]

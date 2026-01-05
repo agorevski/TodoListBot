@@ -16,7 +16,17 @@ def create_task(
     priority: Priority = Priority.A,
     done: bool = False,
 ) -> Task:
-    """Helper to create a task for testing."""
+    """Create a Task instance for testing.
+
+    Args:
+        id: The unique identifier for the task.
+        description: The task description text.
+        priority: The priority level of the task.
+        done: Whether the task is marked as complete.
+
+    Returns:
+        A Task instance configured with test server/channel/user IDs.
+    """
     return Task(
         id=id,
         description=description,
@@ -30,13 +40,21 @@ def create_task(
 
 @pytest.fixture
 def mock_bot() -> MagicMock:
-    """Create a mock Discord bot."""
+    """Create a mock Discord bot.
+
+    Returns:
+        A MagicMock object representing a Discord bot instance.
+    """
     return MagicMock()
 
 
 @pytest.fixture
 def mock_storage() -> MagicMock:
-    """Create a mock storage."""
+    """Create a mock storage backend.
+
+    Returns:
+        A MagicMock with async methods for task storage operations.
+    """
     storage = MagicMock()
     storage.add_task = AsyncMock()
     storage.get_tasks = AsyncMock(return_value=[])
@@ -49,13 +67,26 @@ def mock_storage() -> MagicMock:
 
 @pytest.fixture
 def cog(mock_bot: MagicMock, mock_storage: MagicMock) -> TasksCog:
-    """Create a TasksCog instance."""
+    """Create a TasksCog instance for testing.
+
+    Args:
+        mock_bot: The mock Discord bot instance.
+        mock_storage: The mock storage backend.
+
+    Returns:
+        A TasksCog instance configured with mock dependencies.
+    """
     return TasksCog(mock_bot, mock_storage)
 
 
 @pytest.fixture
 def mock_interaction() -> MagicMock:
-    """Create a mock Discord interaction."""
+    """Create a mock Discord interaction.
+
+    Returns:
+        A MagicMock representing a Discord slash command interaction
+        with pre-configured guild, channel, user, and response attributes.
+    """
     interaction = MagicMock()
     interaction.guild = MagicMock()
     interaction.guild.id = TEST_SERVER_ID
@@ -75,7 +106,13 @@ class TestAddTaskCommand:
     async def test_add_task_success(
         self, cog: TasksCog, mock_storage: MagicMock, mock_interaction: MagicMock
     ) -> None:
-        """Test successfully adding a task."""
+        """Test successfully adding a task.
+
+        Args:
+            cog: The TasksCog instance under test.
+            mock_storage: The mock storage backend.
+            mock_interaction: The mock Discord interaction.
+        """
         task = create_task(id=1, description="New task")
         mock_storage.add_task.return_value = task
 
@@ -90,7 +127,12 @@ class TestAddTaskCommand:
     async def test_add_task_no_guild(
         self, cog: TasksCog, mock_interaction: MagicMock
     ) -> None:
-        """Test adding task outside of a server."""
+        """Test adding task outside of a server.
+
+        Args:
+            cog: The TasksCog instance under test.
+            mock_interaction: The mock Discord interaction.
+        """
         mock_interaction.guild = None
 
         await cog.add_task.callback(cog, mock_interaction, "A", "Task")
@@ -104,7 +146,12 @@ class TestAddTaskCommand:
     async def test_add_task_invalid_priority(
         self, cog: TasksCog, mock_interaction: MagicMock
     ) -> None:
-        """Test adding task with invalid priority."""
+        """Test adding task with invalid priority.
+
+        Args:
+            cog: The TasksCog instance under test.
+            mock_interaction: The mock Discord interaction.
+        """
         await cog.add_task.callback(cog, mock_interaction, "X", "Task")
 
         mock_interaction.response.send_message.assert_called_once()
@@ -116,7 +163,12 @@ class TestAddTaskCommand:
     async def test_add_task_description_too_long(
         self, cog: TasksCog, mock_interaction: MagicMock
     ) -> None:
-        """Test adding task with description exceeding max length."""
+        """Test adding task with description exceeding max length.
+
+        Args:
+            cog: The TasksCog instance under test.
+            mock_interaction: The mock Discord interaction.
+        """
         long_desc = "x" * (MAX_DESCRIPTION_LENGTH + 1)
 
         await cog.add_task.callback(cog, mock_interaction, "A", long_desc)
@@ -134,7 +186,13 @@ class TestListTasksCommand:
     async def test_list_tasks_empty(
         self, cog: TasksCog, mock_storage: MagicMock, mock_interaction: MagicMock
     ) -> None:
-        """Test listing tasks when empty."""
+        """Test listing tasks when empty.
+
+        Args:
+            cog: The TasksCog instance under test.
+            mock_storage: The mock storage backend.
+            mock_interaction: The mock Discord interaction.
+        """
         mock_storage.get_tasks.return_value = []
         mock_interaction.original_response.return_value = MagicMock()
 
@@ -147,7 +205,13 @@ class TestListTasksCommand:
     async def test_list_tasks_with_date(
         self, cog: TasksCog, mock_storage: MagicMock, mock_interaction: MagicMock
     ) -> None:
-        """Test listing tasks for specific date."""
+        """Test listing tasks for specific date.
+
+        Args:
+            cog: The TasksCog instance under test.
+            mock_storage: The mock storage backend.
+            mock_interaction: The mock Discord interaction.
+        """
         mock_storage.get_tasks.return_value = []
         mock_interaction.original_response.return_value = MagicMock()
 
@@ -160,7 +224,12 @@ class TestListTasksCommand:
     async def test_list_tasks_invalid_date(
         self, cog: TasksCog, mock_interaction: MagicMock
     ) -> None:
-        """Test listing tasks with invalid date format."""
+        """Test listing tasks with invalid date format.
+
+        Args:
+            cog: The TasksCog instance under test.
+            mock_interaction: The mock Discord interaction.
+        """
         await cog.list_tasks.callback(cog, mock_interaction, "invalid-date")
 
         mock_interaction.response.send_message.assert_called_once()
@@ -172,7 +241,12 @@ class TestListTasksCommand:
     async def test_list_tasks_no_guild(
         self, cog: TasksCog, mock_interaction: MagicMock
     ) -> None:
-        """Test listing tasks outside of a server."""
+        """Test listing tasks outside of a server.
+
+        Args:
+            cog: The TasksCog instance under test.
+            mock_interaction: The mock Discord interaction.
+        """
         mock_interaction.guild = None
 
         await cog.list_tasks.callback(cog, mock_interaction, None)
@@ -185,7 +259,13 @@ class TestListTasksCommand:
     async def test_list_tasks_with_tasks(
         self, cog: TasksCog, mock_storage: MagicMock, mock_interaction: MagicMock
     ) -> None:
-        """Test listing tasks when tasks exist."""
+        """Test listing tasks when tasks exist.
+
+        Args:
+            cog: The TasksCog instance under test.
+            mock_storage: The mock storage backend.
+            mock_interaction: The mock Discord interaction.
+        """
         tasks = [create_task(id=1, description="Task 1")]
         mock_storage.get_tasks.return_value = tasks
         mock_interaction.original_response.return_value = MagicMock()
@@ -204,7 +284,13 @@ class TestMarkDoneCommand:
     async def test_mark_done_success(
         self, cog: TasksCog, mock_storage: MagicMock, mock_interaction: MagicMock
     ) -> None:
-        """Test successfully marking task as done."""
+        """Test successfully marking task as done.
+
+        Args:
+            cog: The TasksCog instance under test.
+            mock_storage: The mock storage backend.
+            mock_interaction: The mock Discord interaction.
+        """
         task = create_task(id=1)
         mock_storage.get_task_by_id.return_value = task
         mock_storage.mark_task_done.return_value = True
@@ -221,7 +307,13 @@ class TestMarkDoneCommand:
     async def test_mark_done_not_found(
         self, cog: TasksCog, mock_storage: MagicMock, mock_interaction: MagicMock
     ) -> None:
-        """Test marking non-existent task as done."""
+        """Test marking non-existent task as done.
+
+        Args:
+            cog: The TasksCog instance under test.
+            mock_storage: The mock storage backend.
+            mock_interaction: The mock Discord interaction.
+        """
         mock_storage.get_task_by_id.return_value = None
 
         await cog.mark_done.callback(cog, mock_interaction, 999)
@@ -235,7 +327,12 @@ class TestMarkDoneCommand:
     async def test_mark_done_no_guild(
         self, cog: TasksCog, mock_interaction: MagicMock
     ) -> None:
-        """Test marking task done outside of a server."""
+        """Test marking task done outside of a server.
+
+        Args:
+            cog: The TasksCog instance under test.
+            mock_interaction: The mock Discord interaction.
+        """
         mock_interaction.guild = None
 
         await cog.mark_done.callback(cog, mock_interaction, 1)
@@ -248,7 +345,13 @@ class TestMarkDoneCommand:
     async def test_mark_done_storage_fails(
         self, cog: TasksCog, mock_storage: MagicMock, mock_interaction: MagicMock
     ) -> None:
-        """Test when storage mark_done fails."""
+        """Test when storage mark_done fails.
+
+        Args:
+            cog: The TasksCog instance under test.
+            mock_storage: The mock storage backend.
+            mock_interaction: The mock Discord interaction.
+        """
         task = create_task(id=1)
         mock_storage.get_task_by_id.return_value = task
         mock_storage.mark_task_done.return_value = False
@@ -267,7 +370,13 @@ class TestDeleteTaskCommand:
     async def test_delete_task_success(
         self, cog: TasksCog, mock_storage: MagicMock, mock_interaction: MagicMock
     ) -> None:
-        """Test successfully deleting a task."""
+        """Test successfully deleting a task.
+
+        Args:
+            cog: The TasksCog instance under test.
+            mock_storage: The mock storage backend.
+            mock_interaction: The mock Discord interaction.
+        """
         task = create_task(id=1)
         mock_storage.get_task_by_id.return_value = task
         mock_storage.delete_task.return_value = True
@@ -283,7 +392,13 @@ class TestDeleteTaskCommand:
     async def test_delete_task_not_found(
         self, cog: TasksCog, mock_storage: MagicMock, mock_interaction: MagicMock
     ) -> None:
-        """Test deleting non-existent task."""
+        """Test deleting non-existent task.
+
+        Args:
+            cog: The TasksCog instance under test.
+            mock_storage: The mock storage backend.
+            mock_interaction: The mock Discord interaction.
+        """
         mock_storage.get_task_by_id.return_value = None
 
         await cog.delete_task.callback(cog, mock_interaction, 999)
@@ -297,7 +412,12 @@ class TestDeleteTaskCommand:
     async def test_delete_task_no_guild(
         self, cog: TasksCog, mock_interaction: MagicMock
     ) -> None:
-        """Test deleting task outside of a server."""
+        """Test deleting task outside of a server.
+
+        Args:
+            cog: The TasksCog instance under test.
+            mock_interaction: The mock Discord interaction.
+        """
         mock_interaction.guild = None
 
         await cog.delete_task.callback(cog, mock_interaction, 1)
@@ -310,7 +430,13 @@ class TestDeleteTaskCommand:
     async def test_delete_task_storage_fails(
         self, cog: TasksCog, mock_storage: MagicMock, mock_interaction: MagicMock
     ) -> None:
-        """Test when storage delete fails."""
+        """Test when storage delete fails.
+
+        Args:
+            cog: The TasksCog instance under test.
+            mock_storage: The mock storage backend.
+            mock_interaction: The mock Discord interaction.
+        """
         task = create_task(id=1)
         mock_storage.get_task_by_id.return_value = task
         mock_storage.delete_task.return_value = False
@@ -329,7 +455,13 @@ class TestClearTasksCommand:
     async def test_clear_tasks_success(
         self, cog: TasksCog, mock_storage: MagicMock, mock_interaction: MagicMock
     ) -> None:
-        """Test successfully clearing completed tasks."""
+        """Test successfully clearing completed tasks.
+
+        Args:
+            cog: The TasksCog instance under test.
+            mock_storage: The mock storage backend.
+            mock_interaction: The mock Discord interaction.
+        """
         mock_storage.clear_completed_tasks.return_value = 3
 
         await cog.clear_tasks.callback(cog, mock_interaction)
@@ -344,7 +476,13 @@ class TestClearTasksCommand:
     async def test_clear_tasks_none(
         self, cog: TasksCog, mock_storage: MagicMock, mock_interaction: MagicMock
     ) -> None:
-        """Test clearing when no tasks are completed."""
+        """Test clearing when no tasks are completed.
+
+        Args:
+            cog: The TasksCog instance under test.
+            mock_storage: The mock storage backend.
+            mock_interaction: The mock Discord interaction.
+        """
         mock_storage.clear_completed_tasks.return_value = 0
 
         await cog.clear_tasks.callback(cog, mock_interaction)
@@ -358,7 +496,12 @@ class TestClearTasksCommand:
     async def test_clear_tasks_no_guild(
         self, cog: TasksCog, mock_interaction: MagicMock
     ) -> None:
-        """Test clearing tasks outside of a server."""
+        """Test clearing tasks outside of a server.
+
+        Args:
+            cog: The TasksCog instance under test.
+            mock_interaction: The mock Discord interaction.
+        """
         mock_interaction.guild = None
 
         await cog.clear_tasks.callback(cog, mock_interaction)
@@ -375,7 +518,12 @@ class TestCogErrorHandling:
     async def test_cooldown_error(
         self, cog: TasksCog, mock_interaction: MagicMock
     ) -> None:
-        """Test cooldown error handling."""
+        """Test cooldown error handling.
+
+        Args:
+            cog: The TasksCog instance under test.
+            mock_interaction: The mock Discord interaction.
+        """
         from discord import app_commands
 
         error = app_commands.CommandOnCooldown(cooldown=MagicMock(), retry_after=5.0)
@@ -391,7 +539,12 @@ class TestCogErrorHandling:
     async def test_generic_error(
         self, cog: TasksCog, mock_interaction: MagicMock
     ) -> None:
-        """Test generic error handling."""
+        """Test generic error handling.
+
+        Args:
+            cog: The TasksCog instance under test.
+            mock_interaction: The mock Discord interaction.
+        """
         from discord import app_commands
 
         error = app_commands.AppCommandError("Test error")
@@ -409,7 +562,12 @@ class TestSetup:
 
     @pytest.mark.asyncio
     async def test_setup(self, mock_bot: MagicMock, mock_storage: MagicMock) -> None:
-        """Test setup function adds cog to bot."""
+        """Test setup function adds cog to bot.
+
+        Args:
+            mock_bot: The mock Discord bot instance.
+            mock_storage: The mock storage backend.
+        """
         from todo_bot.cogs.tasks import setup
 
         mock_bot.add_cog = AsyncMock()

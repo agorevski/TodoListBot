@@ -50,8 +50,29 @@ def with_retry(
     """
 
     def decorator(func: Callable) -> Callable:
+        """Inner decorator that wraps the function with retry logic.
+
+        Args:
+            func: The async function to wrap.
+
+        Returns:
+            The wrapped function with retry logic.
+        """
+
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
+            """Wrapper function that executes the decorated function with retries.
+
+            Args:
+                *args: Positional arguments to pass to the wrapped function.
+                **kwargs: Keyword arguments to pass to the wrapped function.
+
+            Returns:
+                The result of the wrapped function.
+
+            Raises:
+                StorageOperationError: If all retry attempts fail.
+            """
             last_exception = None
             for attempt in range(max_retries + 1):
                 try:
@@ -215,7 +236,11 @@ class SQLiteTaskStorage(TaskStorage):
         )
 
     async def close(self) -> None:
-        """Close the database connection."""
+        """Close the database connection.
+
+        This method safely closes the database connection if one exists.
+        After calling this method, the connection will be set to None.
+        """
         if self._connection:
             await self._connection.close()
             self._connection = None
@@ -368,7 +393,18 @@ class SQLiteTaskStorage(TaskStorage):
         task_date: date | None = None,
         include_done: bool = True,
     ) -> list[Task]:
-        """Get tasks for a specific user in a channel."""
+        """Get tasks for a specific user in a channel.
+
+        Args:
+            server_id: Discord server (guild) ID.
+            channel_id: Discord channel ID.
+            user_id: Discord user ID.
+            task_date: Date to filter tasks by. Defaults to today.
+            include_done: Whether to include completed tasks. Defaults to True.
+
+        Returns:
+            List of Task objects ordered by priority, done status, and ID.
+        """
         conn = self._ensure_connected()
         task_date = task_date or date.today()
 
@@ -398,7 +434,17 @@ class SQLiteTaskStorage(TaskStorage):
         channel_id: int,
         user_id: int,
     ) -> Task | None:
-        """Get a specific task by its ID."""
+        """Get a specific task by its ID.
+
+        Args:
+            task_id: The unique identifier of the task.
+            server_id: Discord server (guild) ID.
+            channel_id: Discord channel ID.
+            user_id: Discord user ID.
+
+        Returns:
+            The Task object if found, None otherwise.
+        """
         conn = self._ensure_connected()
 
         cursor = await conn.execute(
@@ -495,7 +541,17 @@ class SQLiteTaskStorage(TaskStorage):
         channel_id: int,
         user_id: int,
     ) -> bool:
-        """Mark a task as completed."""
+        """Mark a task as completed.
+
+        Args:
+            task_id: The unique identifier of the task.
+            server_id: Discord server (guild) ID.
+            channel_id: Discord channel ID.
+            user_id: Discord user ID.
+
+        Returns:
+            True if the task was found and updated, False otherwise.
+        """
         conn = self._ensure_connected()
 
         cursor = await conn.execute(
@@ -517,7 +573,17 @@ class SQLiteTaskStorage(TaskStorage):
         channel_id: int,
         user_id: int,
     ) -> bool:
-        """Mark a task as not completed."""
+        """Mark a task as not completed.
+
+        Args:
+            task_id: The unique identifier of the task.
+            server_id: Discord server (guild) ID.
+            channel_id: Discord channel ID.
+            user_id: Discord user ID.
+
+        Returns:
+            True if the task was found and updated, False otherwise.
+        """
         conn = self._ensure_connected()
 
         cursor = await conn.execute(
@@ -539,7 +605,17 @@ class SQLiteTaskStorage(TaskStorage):
         user_id: int,
         task_date: date | None = None,
     ) -> int:
-        """Remove all completed tasks for a user."""
+        """Remove all completed tasks for a user.
+
+        Args:
+            server_id: Discord server (guild) ID.
+            channel_id: Discord channel ID.
+            user_id: Discord user ID.
+            task_date: Date to filter tasks by. Defaults to today.
+
+        Returns:
+            The number of tasks that were deleted.
+        """
         conn = self._ensure_connected()
         task_date = task_date or date.today()
 
@@ -563,7 +639,17 @@ class SQLiteTaskStorage(TaskStorage):
         channel_id: int,
         user_id: int,
     ) -> bool:
-        """Delete a specific task."""
+        """Delete a specific task.
+
+        Args:
+            task_id: The unique identifier of the task to delete.
+            server_id: Discord server (guild) ID.
+            channel_id: Discord channel ID.
+            user_id: Discord user ID.
+
+        Returns:
+            True if the task was found and deleted, False otherwise.
+        """
         conn = self._ensure_connected()
 
         cursor = await conn.execute(
